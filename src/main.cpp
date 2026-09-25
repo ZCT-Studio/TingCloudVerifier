@@ -16,9 +16,13 @@
 // Created by wanjiangzhi on 2026/9/25.
 //
 
-#include <iostream>
+#include <drogon/drogon.h>
 
-int main() {
-    std::cout << "TingCloudVerifier 0.1.0\n";
+int main()
+{
+    drogon::app()
+        .addListener("0.0.0.0", 8080)
+        .run();
+
     return 0;
 }
