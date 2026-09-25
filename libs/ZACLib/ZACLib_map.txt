@@ -1,0 +1,9 @@
+# ZACLib_map.txt
+{
+    global:
+        Replace;
+        Search;
+        Has;
+    local:
+        *;
+};
