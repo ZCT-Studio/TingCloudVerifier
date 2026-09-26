@@ -34,6 +34,23 @@ jobs:
       - name: Install CMake
         uses: lukka/get-cmake@latest
 
+      - name: Install cross-compilation dependencies (Linux)
+        if: runner.os == 'Linux' && matrix.arch != 'x64'
+        run: |
+          sudo apt-get update
+          case '${{ matrix.arch }}' in
+            x86)
+              sudo apt-get install -y g++-multilib gcc-multilib
+              ;;
+            arm64)
+              sudo apt-get install -y g++-aarch64-linux-gnu
+              ;;
+            arm)
+              sudo apt-get install -y g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+              ;;
+          esac
+        shell: bash
+
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git
