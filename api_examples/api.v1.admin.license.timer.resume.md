@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/admin/license-timer/resume -H 'Authorization: Bearer '
+curl -s -X POST http://127.0.0.1:10211/api/v1/admin/license-timer/resume -H 'Authorization: Bearer '
 ``
 ## 响应
 

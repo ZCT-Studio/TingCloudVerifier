@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/license/unbind -H 'Authorization: Bearer ' -d 'license_id=1'
+curl -s -X POST http://127.0.0.1:10211/api/v1/license/unbind -H 'Authorization: Bearer ' -d 'license_id=1'
 ``
 ## 请求体
 

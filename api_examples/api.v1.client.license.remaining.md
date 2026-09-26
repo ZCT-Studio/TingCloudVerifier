@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s 'http://127.0.0.1:8080/api/v1/client/license/remaining?appid=1&license=TCV-XXXX-XXXX-XXXX'
+curl -s 'http://127.0.0.1:10211/api/v1/client/license/remaining?appid=1&license=TCV-XXXX-XXXX-XXXX'
 ``
 ## 响应
 

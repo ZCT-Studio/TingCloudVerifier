@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s 'http://127.0.0.1:8080/api/v1/update/latest?appid=1&channel=stable'
+curl -s 'http://127.0.0.1:10211/api/v1/update/latest?appid=1&channel=stable'
 ``
 ## 响应
 

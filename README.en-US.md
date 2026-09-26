@@ -168,7 +168,7 @@ server:
 
 database:
   type: "sqlite"
-  sqlite_path: "./tingcloud.db"
+  sqlite_path: "./tcv.db"
 
 security:
   admin_security_level: "LAN"          # LOCAL | LAN | PUBLIC
@@ -357,8 +357,8 @@ bash tests/AllTest.sh
 tests\AllTest.bat
 
 # Target override
-bash tests/AllTest.sh 127.0.0.1 8080
-AllTest.bat 127.0.0.1 8080
+bash tests/AllTest.sh 127.0.0.1 10211
+AllTest.bat 127.0.0.1 10211
 ```
 
 Coverage: ping → bootstrap-admin → admin login → owner create → owner login → app create → license create → client verify → ban/unban → audit → logout (~10 phases, 20+ API calls).

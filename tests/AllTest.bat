@@ -3,7 +3,7 @@ REM ============================================================
 REM TingCloudVerifier - All-in-one Test Script (Windows Batch)
 REM Usage: AllTest.bat [host] [port]
 REM   host default 127.0.0.1
-REM   port default 8080
+REM   port default 10211
 REM ============================================================
 
 setlocal enabledelayedexpansion
@@ -11,7 +11,7 @@ setlocal enabledelayedexpansion
 set HOST=%~1
 set PORT=%~2
 if "%HOST%"=="" set HOST=127.0.0.1
-if "%PORT%"=="" set PORT=8080
+if "%PORT%"=="" set PORT=10211
 set BASE=http://%HOST%:%PORT%
 
 set PASS=0

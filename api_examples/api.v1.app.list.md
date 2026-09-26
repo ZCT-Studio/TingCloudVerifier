@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s http://127.0.0.1:8080/api/v1/app/list -H 'Authorization: Bearer '
+curl -s http://127.0.0.1:10211/api/v1/app/list -H 'Authorization: Bearer '
 ``
 ## 响应
 

@@ -168,7 +168,7 @@ server:
 
 database:
   type: "sqlite"                              # sqlite | postgresql
-  sqlite_path: "./tingcloud.db"               # SQLite 文件路径
+  sqlite_path: "./tcv.db"               # SQLite 文件路径
 
 security:
   admin_security_level: "LAN"                 # LOCAL | LAN | PUBLIC
@@ -357,8 +357,8 @@ bash tests/AllTest.sh
 tests\AllTest.bat
 
 # 指定目标
-bash tests/AllTest.sh 127.0.0.1 8080
-AllTest.bat 127.0.0.1 8080
+bash tests/AllTest.sh 127.0.0.1 10211
+AllTest.bat 127.0.0.1 10211
 ```
 
 测试覆盖：ping → bootstrap-admin → admin login → owner create → owner login → app create → license create → client verify → ban/unban → audit → logout（共 ~10 个阶段，20+ 次 API 调用）。

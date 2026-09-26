@@ -2,12 +2,12 @@
 # TingCloudVerifier — 一键全链路测试脚本 (Bash)
 # 用法: bash AllTest.sh [host] [port]
 #   host 默认 127.0.0.1
-#   port 默认 8080
+#   port 默认 10211
 
 set -euo pipefail
 
 HOST="${1:-127.0.0.1}"
-PORT="${2:-8080}"
+PORT="${2:-10211}"
 BASE="http://${HOST}:${PORT}"
 PASS=0; FAIL=0
 TOTAL=0

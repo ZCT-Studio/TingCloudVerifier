@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s 'http://127.0.0.1:8080/api/v1/client/license/verify?appid=1&license=TCV-XXXX-XXXX-XXXX&timestamp=1790409133&nonce=a1b2c3d4e5f6'
+curl -s 'http://127.0.0.1:10211/api/v1/client/license/verify?appid=1&license=TCV-XXXX-XXXX-XXXX&timestamp=1790409133&nonce=a1b2c3d4e5f6'
 ``
 ## 响应
 

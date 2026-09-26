@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/license/create -H 'Authorization: Bearer ' -d 'app_id=1&count=5&seconds_per_license=86400'
+curl -s -X POST http://127.0.0.1:10211/api/v1/license/create -H 'Authorization: Bearer ' -d 'app_id=1&count=5&seconds_per_license=86400'
 ``
 ## 请求体
 

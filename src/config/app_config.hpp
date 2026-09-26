@@ -21,7 +21,7 @@
 namespace tcv {
     struct DatabaseConfig {
         std::string type = "sqlite";
-        std::string sqlite_path = "./tingcloud.db";
+        std::string sqlite_path = "./tcv.db";
     };
 
     struct SecurityConfig {

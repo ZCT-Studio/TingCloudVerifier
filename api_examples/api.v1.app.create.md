@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/app/create -H 'Authorization: Bearer ' -d 'name=Game&remark=mygame'
+curl -s -X POST http://127.0.0.1:10211/api/v1/app/create -H 'Authorization: Bearer ' -d 'name=Game&remark=mygame'
 ``
 ## 请求体
 

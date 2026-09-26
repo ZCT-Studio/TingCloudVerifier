@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/auth/owner/login -d 'username=owner1&password=ownerpass'
+curl -s -X POST http://127.0.0.1:10211/api/v1/auth/owner/login -d 'username=owner1&password=ownerpass'
 ``
 ## 请求体
 

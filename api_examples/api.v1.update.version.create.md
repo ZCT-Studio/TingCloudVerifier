@@ -9,7 +9,7 @@
 ## cURL
 
 ``bash
-curl -s -X POST http://127.0.0.1:8080/api/v1/update/version/create -H 'Authorization: Bearer ' -d 'channel_id=1&version=1.2.3&download_url=https://...'
+curl -s -X POST http://127.0.0.1:10211/api/v1/update/version/create -H 'Authorization: Bearer ' -d 'channel_id=1&version=1.2.3&download_url=https://...'
 ``
 ## 请求体
 
