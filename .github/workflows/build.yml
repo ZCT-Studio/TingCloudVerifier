@@ -38,13 +38,13 @@ jobs:
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
-          if (Test-Path ./bootstrap-vcpkg.bat) {
+          if [ '${{ runner.os }}' = 'Windows' ]; then
             ./bootstrap-vcpkg.bat -disableMetrics
-          } else {
+          else
             ./bootstrap-vcpkg.sh -disableMetrics
-          }
+          fi
           ./vcpkg install --triplet=${{ matrix.triplet }}
-        shell: pwsh
+        shell: bash
 
       - name: CMake Configure
         run: |
