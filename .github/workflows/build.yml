@@ -1,0 +1,99 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.arch }}${{ matrix.extra_label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, arch: x64,  triplet: x64-windows-static,    target: "TingCloudVerifier.exe", extra_label: "" }
+          - { os: windows-2022, arch: x86,  triplet: x86-windows-static,    target: "TingCloudVerifier.exe", extra_label: "" }
+          - { os: windows-2022, arch: arm64, triplet: arm64-windows-static,  target: "TingCloudVerifier.exe", extra_label: "" }
+          - { os: ubuntu-latest, arch: x64,  triplet: x64-linux,             target: "TingCloudVerifier",     extra_label: "" }
+          - { os: ubuntu-22.04, arch: x86,  triplet: x86-linux,             target: "TingCloudVerifier",     extra_label: " (x86)" }
+          - { os: ubuntu-latest, arch: arm64, triplet: arm64-linux,          target: "TingCloudVerifier",     extra_label: "" }
+          - { os: ubuntu-22.04, arch: arm,   triplet: arm-linux,             target: "TingCloudVerifier",     extra_label: " (armv7)" }
+          - { os: macos-latest,   arch: arm64, triplet: arm64-osx,            target: "TingCloudVerifier",     extra_label: "" }
+          - { os: macos-13,       arch: x64,  triplet: x64-osx,              target: "TingCloudVerifier",     extra_label: "" }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Install vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg
+          if (Test-Path ./bootstrap-vcpkg.bat) {
+            ./bootstrap-vcpkg.bat -disableMetrics
+          } else {
+            ./bootstrap-vcpkg.sh -disableMetrics
+          }
+          ./vcpkg install --triplet=${{ matrix.triplet }}
+        shell: pwsh
+
+      - name: CMake Configure
+        run: |
+          cmake -B build -S . `
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} `
+            -DCMAKE_BUILD_TYPE=Release
+        shell: pwsh
+
+      - name: Build
+        run: cmake --build build --config Release -j
+        shell: pwsh
+
+      - name: Package Artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $target = "${{ matrix.target }}"
+          Copy-Item -Path "build/$target" -Destination "dist/" -Recurse -ErrorAction SilentlyContinue
+          Copy-Item -Path "build/$target" -Destination "dist/" -ErrorAction SilentlyContinue
+          Copy-Item -Path "config" -Destination "dist/config" -Recurse -ErrorAction SilentlyContinue
+          Copy-Item -Path "migrations" -Destination "dist/migrations" -Recurse -ErrorAction SilentlyContinue
+          Copy-Item -Path "README.md" -Destination "dist/" -ErrorAction SilentlyContinue
+          Copy-Item -Path "LICENSE" -Destination "dist/" -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TingCloudVerifier-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List Artifacts
+        run: ls -lah artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: TingCloudVerifier ${{ github.ref_name }}
+          files: artifacts/*
+          prerelease: ${{ contains(github.ref_name, '-') }}

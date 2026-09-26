@@ -118,9 +118,9 @@ namespace ZCLibLog {
          * @param message 日志信息
          * @param level 日志等级
          */
-        void execute(std::string& message, const LogLevel level) const {
+        void execute(const std::string& message, const LogLevel level) const {
             if (!message.empty()) {
-                auto message_p = std::make_shared<std::string>(std::move(message));
+                auto message_p = std::make_shared<std::string>(message);
                 LoggerAsync_ThreadPool.submit(
                     [this, message_p, level] {
                         #if ZCLIBLOG_LOGGER_CONFIGURATIONS_LOGGER_ASYNC_MUTEX

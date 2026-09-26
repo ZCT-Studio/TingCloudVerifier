@@ -1,69 +1,29 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Build directories
+# Build
+cmake-build-*/
 build/
-Build/
-build-*/
+out/
+*.user
+*.vcxproj.user
+*.sdf
+*.suo
+*.opensdf
 
-# CMake generated files
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
+# IDE
+.idea/
+.vscode/
+.clangd/
+.clang-tidy/
 
-# Temporary files
-*.tmp
-*.log
-*.bak
-*.swp
+# OS
+Thumbs.db
+.DS_Store
 
-# vcpkg
-vcpkg_installed/
+# Data
+*.db
+*.db-wal
+*.db-shm
+logs/
+config/config.yaml
 
-# debug information files
-*.dwo
-
-# test output & cache
-Testing/
-.cache/
+# Dependency cache
+vcpkg/

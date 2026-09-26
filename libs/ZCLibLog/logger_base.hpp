@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 // ReSharper disable CppUnusedIncludeDirective

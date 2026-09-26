@@ -10,6 +10,7 @@
 #include <memory>
 #include <utility>
 #include <type_traits>
+#include <limits>
 
 #include "logger_macros.h"
 
@@ -31,6 +32,27 @@ namespace ZCLibLog {
         Register(FATAL, 6) \
         Register(OFF, std::numeric_limits<LogLevelBase>::max())
 
+    #pragma push_macro("ALL")
+    #pragma push_macro("ERROR")
+    #pragma push_macro("NO_ERROR")
+    #pragma push_macro("FATAL")
+    #pragma push_macro("DELETE")
+    #ifdef ALL
+    #undef ALL
+    #endif
+    #ifdef ERROR
+    #undef ERROR
+    #endif
+    #ifdef NO_ERROR
+    #undef NO_ERROR
+    #endif
+    #ifdef FATAL
+    #undef FATAL
+    #endif
+    #ifdef DELETE
+    #undef DELETE
+    #endif
+
     /// @brief 一些日志等级
     enum class LogLevel : LogLevelBase {
         #define ZCLIBLOG_HELPER_ENUM_CASE(name, value) name = value,
@@ -51,6 +73,12 @@ namespace ZCLibLog {
         }
         return "UNKNOWN";
     }
+
+    #pragma pop_macro("DELETE")
+    #pragma pop_macro("FATAL")
+    #pragma pop_macro("NO_ERROR")
+    #pragma pop_macro("ERROR")
+    #pragma pop_macro("ALL")
 
     #undef ZCLIBLOG_HELPER_LEVELS
 
@@ -277,6 +305,7 @@ namespace ZCLibLog {
         /// @brief 检查是否可执行
         ZCLibLog_NODISCARD bool check_executable() const {
             if (
+                m_logger &&
                 m_logger->has_executor() &&
                 m_logger->be_executable(level())
             )

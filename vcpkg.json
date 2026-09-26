@@ -2,6 +2,10 @@
     "name": "tingcloudverifier",
     "version-string": "0.1.0",
     "dependencies": [
-        "drogon"
+        "drogon",
+        "sqlite3",
+        "yaml-cpp",
+        "openssl",
+        "argon2"
     ]
 }
