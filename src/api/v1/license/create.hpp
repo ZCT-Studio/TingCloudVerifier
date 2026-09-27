@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -13,22 +19,7 @@
 #ifndef TCV_API_V1_LICENSE_CREATE
 #define TCV_API_V1_LICENSE_CREATE
 
-#include <exception>
-#include <functional>
-#include <ctime>
-#include <drogon/drogon.h>
-#include <json/json.h>
-#include "api/response.hpp"
-#include "api/v1/common.hpp"
-#include "common/types.hpp"
-#include "crypto/crypto.hpp"
-#include "database/database.hpp"
-#include "models/models.hpp"
-#include "repositories/license_repo.hpp"
-#include "services/auth_app_service.hpp"
-#include "services/license_service.hpp"
-#include "services/security_service.hpp"
-#include "services/subuser_update_service.hpp"
+#include "api/v1/uih.h"
 
 namespace tcv::inside::api::v1::license::create {
     inline void handle(
@@ -40,12 +31,14 @@ namespace tcv::inside::api::v1::license::create {
         in.count = tcv::inside::api::v1::common::paramI64(req, "count", 1);
         in.seconds_per_license = tcv::inside::api::v1::common::paramI64(req, "seconds_per_license", 86400);
         in.owner_id = tcv::inside::api::v1::common::currentUserId(req);
-        in.owner_role = tcv::inside::api::v1::common::paramStr(req, "_owner_role", "OWNER");
+        in.owner_role = tcv::inside::api::v1::common::currentUserRole(req);
         in.remark = tcv::inside::api::v1::common::paramStr(req, "remark");
-        in.binding_mode = tcv::inside::api::v1::common::paramStr(req, "binding_mode", "NONE");
+        in.binding_mode = tcv::inside::api::v1::common::paramStr(req, "binding_mode", "");
         in.unbind_limit = static_cast<int>(tcv::inside::api::v1::common::paramI64(req, "unbind_limit", 0));
         in.unbind_time_cost = static_cast<int>(tcv::inside::api::v1::common::paramI64(req, "unbind_time_cost", 0));
         in.unbind_count_cost = static_cast<int>(tcv::inside::api::v1::common::paramI64(req, "unbind_count_cost", 0));
+        in.license_length = static_cast<int>(tcv::inside::api::v1::common::paramI64(req, "license_length", 32));
+        in.license_type = tcv::inside::api::v1::common::paramStr(req, "license_type");
 
         const auto r = tcv::service::LicenseService::createBatch(in);
         if (!r.success) {
@@ -55,8 +48,12 @@ namespace tcv::inside::api::v1::license::create {
         Json::Value v;
         v["created"] = r.actual_created;
         v["first_plain_license"] = r.first_license_plain;
+        Json::Value arr(Json::arrayValue);
+        for (const auto& lic : r.plain_licenses)
+            arr.append(lic);
+        v["licenses"] = arr;
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
-} // namespace
+}
 
 #endif // TCV_API_V1_LICENSE_CREATE

@@ -142,6 +142,19 @@ namespace tcv::crypto {
         return toHex(randomBytes(bytes));
     }
 
+    inline std::string randomUppercaseAlphanumeric(const size_t len) {
+        static constexpr char CHARS[] =
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        static constexpr size_t N = sizeof(CHARS) - 1;
+        std::string out;
+        out.reserve(len);
+        std::vector<unsigned char> rnd(len);
+        RAND_bytes(rnd.data(), static_cast<int>(len));
+        for (size_t i = 0; i < len; ++i)
+            out.push_back(CHARS[rnd[i] % N]);
+        return out;
+    }
+
     inline std::string randomAlphanumeric(const size_t len) {
         static constexpr char CHARS[] =
             "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

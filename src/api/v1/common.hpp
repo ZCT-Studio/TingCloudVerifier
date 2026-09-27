@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -107,6 +113,24 @@ namespace tcv::inside::api::v1::common {
         try { return attrs->get<std::string>("tcv.user_type"); } catch (...) { return ""; }
     }
 
+    // user_type → role string (OWNER / SUBUSER)
+    inline std::string currentUserRole(const drogon::HttpRequestPtr& req) {
+        auto ut = currentUserType(req);
+        if (ut == "SUBUSER") return "SUBUSER";
+        if (ut == "USER") return "OWNER";
+        if (ut == "ADMIN") return "ADMIN";
+        return "OWNER";
+    }
+
+    // SUBUSER 只能操作自己创建的卡密
+    inline bool subuserOwnsLicense(const drogon::HttpRequestPtr& req, int64_t license_id) {
+        auto ut = currentUserType(req);
+        if (ut != "SUBUSER") return true;
+        auto lic = repo::LicenseRepo::findById(license_id);
+        if (!lic) return false;
+        return lic->created_by == currentUserId(req) && lic->created_by_role == "SUBUSER";
+    }
+
     template <typename Fn>
     auto wrap(Fn fn) {
         return [fn = std::move(fn)](
@@ -162,8 +186,7 @@ namespace tcv::inside::api::v1::common {
                 }
 
                 else if (req_path.rfind("/api/v1/app/", 0) == 0 ||
-                         req_path.rfind("/api/v1/license/", 0) == 0 ||
-                         req_path.rfind("/api/v1/function/", 0) == 0) {
+                         req_path.rfind("/api/v1/license/", 0) == 0) {
                     std::string bearer = authBearer(req);
                     auto u = tcv::service::AuthService::authenticateSession(bearer);
                     if (!u.success) {
@@ -238,7 +261,7 @@ namespace tcv::inside::api::v1::common {
             }
         };
     }
-} // namespace tcv::inside::api::v1::common
+}
 
 #endif // TCV_API_V1_COMMON
 

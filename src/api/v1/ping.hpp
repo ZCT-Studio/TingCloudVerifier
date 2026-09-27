@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,21 +16,25 @@
 // Created by wanjiangzhi on 2026/9/25.
 //
 
-#ifndef TCV_API_V1_UPDATE_LATEST
-#define TCV_API_V1_UPDATE_LATEST
+#ifndef TCV_API_V1_PING
+#define TCV_API_V1_PING
 
-#include "api/v1/uih.h"
+#include <functional>
+#include <drogon/drogon.h>
 
-namespace tcv::inside::api::v1::update::latest {
+namespace tcv::inside::api::v1::ping {
     inline void handle(
-        const drogon::HttpRequestPtr& req,
-        std::function<void(const drogon::HttpResponsePtr &)>&& cb
+        const drogon::HttpRequestPtr&,
+        std::function<void(const drogon::HttpResponsePtr&)>&& cb
     ) {
-        const auto appid = tcv::inside::api::v1::common::paramStr(req, "appid");
-        const auto channel = tcv::inside::api::v1::common::paramStr(req, "channel", "stable");
-        auto v = tcv::service::UpdateService::getLatest(appid, channel);
-        cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
+        const auto resp = drogon::HttpResponse::newHttpResponse(
+            drogon::k200OK,
+            drogon::CT_TEXT_PLAIN
+        );
+
+        resp->setBody("pong");
+        cb(resp);
     }
 }
 
-#endif // TCV_API_V1_UPDATE_LATEST
+#endif // TCV_API_V1_PING

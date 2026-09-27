@@ -1,4 +1,4 @@
-// Copyright 2026 ZCT-Studio
+﻿// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -232,7 +232,9 @@ namespace tcv::repo {
             a.appid = getStr(r, "appid");
             a.name = getStr(r, "name");
             a.description = getStr(r, "description");
-            a.secret_hash = getStr(r, "secret_hash");
+
+            a.secret = getStr(r, "secret");
+            a.binding_mode = getStr(r, "binding_mode");
             a.status = static_cast<int>(getInt(r, "status"));
             a.created_at = getInt(r, "created_at");
             a.updated_at = getInt(r, "updated_at");
@@ -252,7 +254,9 @@ namespace tcv::repo {
             a.appid = getStr(r, "appid");
             a.name = getStr(r, "name");
             a.description = getStr(r, "description");
-            a.secret_hash = getStr(r, "secret_hash");
+
+            a.secret = getStr(r, "secret");
+            a.binding_mode = getStr(r, "binding_mode");
             a.status = static_cast<int>(getInt(r, "status"));
             a.created_at = getInt(r, "created_at");
             a.updated_at = getInt(r, "updated_at");
@@ -260,35 +264,48 @@ namespace tcv::repo {
         }
 
         inline int64_t insert(
-            int64_t owner_id,
-            const std::string& appid,
-            const std::string& name,
-            const std::string& desc,
-            const std::string& secret_hash,
-            int64_t now
+        int64_t owner_id,
+        const std::string& appid,
+        const std::string& name,
+        const std::string& desc,
+        const std::string& secret,
+        int64_t now,
+        const std::string& binding_mode = "NONE"
         ) {
             tcv::db::Database::instance().execParams(
-                "INSERT INTO apps(owner_id, appid, name, description, secret_hash, status, created_at, updated_at)"
-                " VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+                "INSERT INTO apps(owner_id, appid, name, description, secret, binding_mode, status, created_at, updated_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
                 owner_id,
                 appid,
                 name,
                 desc,
-                secret_hash,
+                secret,
+                binding_mode,
                 now,
                 now
             );
             return tcv::db::Database::instance().lastInsertId();
         }
 
-        inline void updateSecretHash(int64_t id, const std::string& new_hash, int64_t now) {
+        inline void updateAppSecret(int64_t id, const std::string& new_secret, int64_t now) {
             tcv::db::Database::instance().execParams(
-                "UPDATE apps SET secret_hash = ?, updated_at = ? WHERE id = ?",
-                new_hash,
+                "UPDATE apps SET secret = ?, updated_at = ? WHERE id = ?",
+                new_secret,
                 now,
                 id
             );
         }
+
+        inline void updateBindingMode(int64_t id, const std::string& mode, int64_t now) {
+            tcv::db::Database::instance().execParams(
+                "UPDATE apps SET binding_mode = ?, updated_at = ? WHERE id = ?",
+                mode,
+                now,
+                id
+            );
+        }
+
+        
 
         inline void setStatus(int64_t id, int status, int64_t now) {
             tcv::db::Database::instance().execParams(
@@ -312,7 +329,9 @@ namespace tcv::repo {
                 a.appid = getStr(r, "appid");
                 a.name = getStr(r, "name");
                 a.description = getStr(r, "description");
-                a.secret_hash = getStr(r, "secret_hash");
+
+                a.secret = getStr(r, "secret");
+                a.binding_mode = getStr(r, "binding_mode");
                 a.status = static_cast<int>(getInt(r, "status"));
                 a.created_at = getInt(r, "created_at");
                 a.updated_at = getInt(r, "updated_at");
@@ -324,78 +343,30 @@ namespace tcv::repo {
         inline void removeById(int64_t id) {
             tcv::db::Database::instance().execParams("DELETE FROM apps WHERE id = ?", id);
         }
-    } // namespace AppRepo
 
-    // ============================================================
-    // FunctionRepository
-    // ============================================================
-    namespace FuncRepo {
-        inline std::optional<tcv::models::Function> find(int64_t app_id, const std::string& function_id) {
+        inline std::vector<tcv::models::App> listAll() {
             auto rows = tcv::db::Database::instance().queryParams(
-                "SELECT * FROM functions WHERE app_id = ? AND function_id = ?",
-                app_id,
-                function_id
+                "SELECT * FROM apps ORDER BY id DESC"
             );
-            if (rows.empty()) return std::nullopt;
-            auto r = rows[0];
-            tcv::models::Function f;
-            f.id = getInt(r, "id");
-            f.app_id = getInt(r, "app_id");
-            f.function_id = getStr(r, "function_id");
-            f.name = getStr(r, "name");
-            f.description = getStr(r, "description");
-            f.status = static_cast<int>(getInt(r, "status"));
-            f.created_at = getInt(r, "created_at");
-            return f;
-        }
-
-        inline int64_t insert(
-            int64_t app_id,
-            const std::string& fid,
-            const std::string& name,
-            const std::string& desc,
-            int64_t now
-        ) {
-            tcv::db::Database::instance().execParams(
-                "INSERT INTO functions(app_id, function_id, name, description, status, created_at)"
-                " VALUES (?, ?, ?, ?, 1, ?)",
-                app_id,
-                fid,
-                name,
-                desc,
-                now
-            );
-            return tcv::db::Database::instance().lastInsertId();
-        }
-
-        inline void remove(int64_t app_id, const std::string& fid) {
-            tcv::db::Database::instance().execParams(
-                "DELETE FROM functions WHERE app_id = ? AND function_id = ?",
-                app_id,
-                fid
-            );
-        }
-
-        inline std::vector<tcv::models::Function> listByApp(int64_t app_id) {
-            auto rows = tcv::db::Database::instance().queryParams(
-                "SELECT * FROM functions WHERE app_id = ? ORDER BY id",
-                app_id
-            );
-            std::vector<tcv::models::Function> out;
+            std::vector<tcv::models::App> out;
             for (auto& r : rows) {
-                tcv::models::Function f;
-                f.id = getInt(r, "id");
-                f.app_id = getInt(r, "app_id");
-                f.function_id = getStr(r, "function_id");
-                f.name = getStr(r, "name");
-                f.description = getStr(r, "description");
-                f.status = static_cast<int>(getInt(r, "status"));
-                f.created_at = getInt(r, "created_at");
-                out.push_back(std::move(f));
+                tcv::models::App a;
+                a.id = getInt(r, "id");
+                a.owner_id = getInt(r, "owner_id");
+                a.appid = getStr(r, "appid");
+                a.name = getStr(r, "name");
+                a.description = getStr(r, "description");
+                a.secret = getStr(r, "secret");
+                a.binding_mode = getStr(r, "binding_mode");
+                a.status = static_cast<int>(getInt(r, "status"));
+                a.created_at = getInt(r, "created_at");
+                a.updated_at = getInt(r, "updated_at");
+                out.push_back(std::move(a));
             }
             return out;
         }
-    } // namespace FuncRepo
-} // namespace tcv::repo
+    } // namespace AppRepo
+
+    } // namespace tcv::repo
 
 #endif // TCV_REPOSITORIES_USER_APP_REPO

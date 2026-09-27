@@ -8,13 +8,13 @@ server:
 database:
   # sqlite / postgresql
   type: "sqlite"
-  sqlite_path: "./tingcloud.db"
+  sqlite_path: "./tcv.db"
   # postgresql 配置预留给扩展
   # postgresql:
   #   host: "127.0.0.1"
   #   port: 5432
-  #   dbname: "tingcloud"
-  #   user: "tingcloud"
+  #   dbname: "tcv"
+  #   user: "tcv"
 
 security:
   # 管理接口安全等级：LOCAL / LAN / PUBLIC

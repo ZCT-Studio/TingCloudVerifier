@@ -14,5 +14,5 @@ curl -s http://127.0.0.1:10211/api/v1/system/ping
 ## 响应
 
 ``json
-{"code":0,"data":{"pong":true,"server":"TingCloudVerifier","server_time":1790409133,"version":"0.1.0"},"message":"OK"}
+{"code":0,"data":{"pong":true,"server":"TingCloudVerifier","server_time":1790409133,"version":"1.0.0-example_version"},"message":"OK"}
 ``

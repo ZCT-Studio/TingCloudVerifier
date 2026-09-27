@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -45,7 +51,16 @@ namespace tcv::inside::api::v1::license::list {
             return;
         }
         const int64_t app_id = app->id;
-        auto lics = tcv::repo::LicenseRepo::listByApp(app_id);
+        const auto user_type = tcv::inside::api::v1::common::currentUserType(req);
+        const int64_t cur_user_id = tcv::inside::api::v1::common::currentUserId(req);
+
+        std::vector<tcv::models::License> lics;
+        if (user_type == "SUBUSER") {
+            lics = tcv::repo::LicenseRepo::listByAppAndCreator(app_id, cur_user_id, "SUBUSER");
+        } else {
+            lics = tcv::repo::LicenseRepo::listByApp(app_id);
+        }
+
         Json::Value arr(Json::arrayValue);
         for (auto& l : lics) {
             Json::Value v;
@@ -54,14 +69,34 @@ namespace tcv::inside::api::v1::license::list {
             v["status"] = l.status;
             v["banned"] = l.banned != 0;
             v["binding_mode"] = l.binding_mode;
+            v["license_type"] = l.license_type;
             v["expires_at"] = l.expires_at;
             v["created_at"] = l.created_at;
             v["unbind_count"] = l.unbind_count;
             v["unbind_limit"] = l.unbind_limit;
+
+            if (l.created_by_role == "SUBUSER") {
+                auto su_rows = tcv::db::Database::instance().queryParams(
+                    "SELECT username FROM sub_users WHERE id = ?", l.created_by
+                );
+                std::string creator = su_rows.empty() ? "subuser" : repo::getStr(su_rows[0], "username");
+                if (user_type == "SUBUSER" && l.created_by == cur_user_id) {
+                    creator += '*';
+                } else if (user_type == "OWNER") {
+                }
+                v["creator"] = creator;
+            } else {
+                auto owner = tcv::repo::UserRepo::findById(l.created_by);
+                std::string creator = owner ? owner->username : "owner";
+                if (user_type == "USER" && l.created_by == cur_user_id) {
+                    creator += '*';
+                }
+                v["creator"] = creator;
+            }
             arr.append(v);
         }
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(arr)));
     }
-} // namespace
+}
 
 #endif // TCV_API_V1_LICENSE_LIST

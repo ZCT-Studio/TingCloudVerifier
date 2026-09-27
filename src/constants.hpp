@@ -22,7 +22,7 @@
 namespace tcv {
     namespace constants {
         inline constexpr auto PROJECT_NAME = "TingCloudVerifier";
-        inline constexpr auto PROJECT_VERSION = "0.1.0";
+        inline constexpr auto PROJECT_VERSION = "1.0.0";
     }
 }
 

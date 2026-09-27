@@ -13,15 +13,15 @@
 // limitations under the License.
 
 //
-// Created by wanjiangzhi on 2026/9/25.
+// Created by wanjiangzhi on 2026/9/27.
 //
 
-#ifndef TCV_API_V1_LICENSE_SET_TIME
-#define TCV_API_V1_LICENSE_SET_TIME
+#ifndef TCV_API_V1_LICENSE_SET_TYPE
+#define TCV_API_V1_LICENSE_SET_TYPE
 
 #include "api/v1/uih.h"
 
-namespace tcv::inside::api::v1::license::set_time {
+namespace tcv::inside::api::v1::license::set_type {
     inline void handle(
         const drogon::HttpRequestPtr& req,
         std::function<void(const drogon::HttpResponsePtr &)>&& cb
@@ -43,10 +43,10 @@ namespace tcv::inside::api::v1::license::set_time {
             return;
         }
         const bool permanent = tcv::inside::api::v1::common::paramBool(req, "permanent");
-        const int64_t exp = permanent
-            ? -1
-            : tcv::inside::api::v1::common::paramI64(req, "expires_at");
-        const auto r = tcv::service::LicenseService::setTime(id, exp);
+        const std::string lic_typ = permanent
+            ? ""
+            : tcv::inside::api::v1::common::paramStr(req, "license_type");
+        const auto r = tcv::service::LicenseService::setType(id, lic_typ);
         cb(
             drogon::HttpResponse::newHttpJsonResponse(
                 tcv::api::makeResponse(r.code, r.message, Json::Value{})
@@ -55,4 +55,4 @@ namespace tcv::inside::api::v1::license::set_time {
     }
 }
 
-#endif // TCV_API_V1_LICENSE_SET_TIME
+#endif //TCV_API_V1_LICENSE_SET_TYPE

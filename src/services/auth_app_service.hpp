@@ -261,9 +261,8 @@ namespace tcv::service {
                 if (const auto existing = repo::AppRepo::findByAppid(appid); !existing) break;
             }
             const std::string secret = tcv::crypto::randomHex(32);
-            const std::string secret_hash = tcv::crypto::sha256Hex(secret);
             const int64_t now = std::time(nullptr);
-            int64_t id = repo::AppRepo::insert(owner_id, appid, name, description, secret_hash, now);
+            int64_t id = repo::AppRepo::insert(owner_id, appid, name, description, secret, now);
 
             return tcv::common::ResultOf<AppSecretPair>::ok({appid, secret});
         }
@@ -272,7 +271,7 @@ namespace tcv::service {
             const auto app = repo::AppRepo::findById(app_db_id);
             if (!app) return tcv::common::Result::fail(3001, "APP 不存在");
             const std::string secret = tcv::crypto::randomHex(32);
-            repo::AppRepo::updateSecretHash(app_db_id, tcv::crypto::sha256Hex(secret), std::time(nullptr));
+            repo::AppRepo::updateAppSecret(app_db_id, secret, std::time(nullptr));
             repo::AuditRepo::log(
                 "OWNER",
                 app->owner_id,
@@ -291,7 +290,7 @@ namespace tcv::service {
         inline bool verifyAppSecret(const int64_t app_db_id, const std::string_view secret_try) {
             const auto app = repo::AppRepo::findById(app_db_id);
             if (!app) return false;
-            return tcv::crypto::sha256Hex(secret_try) == app->secret_hash;
+            return secret_try == app->secret;
         }
     } // namespace AppService
 } // namespace tcv::service

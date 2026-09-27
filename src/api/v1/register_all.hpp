@@ -5,20 +5,26 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
 //
-
 
 #ifndef TCV_API_V1_REGISTER_ALL
 #define TCV_API_V1_REGISTER_ALL
 
 #include <drogon/drogon.h>
 #include "api/v1/common.hpp"
-#include "api/response.hpp"
 #include "common/logger.hpp"
 #include "middleware/middlewares.hpp"
+
+#include "api/v1/ping.hpp"
 
 // --- system ---
 #include "api/v1/system/ping.hpp"
@@ -43,11 +49,7 @@
 #include "api/v1/app/delete.hpp"
 #include "api/v1/app/list.hpp"
 #include "api/v1/app/secret/regenerate.hpp"
-
-// --- function ---
-#include "api/v1/function/create.hpp"
-#include "api/v1/function/delete.hpp"
-#include "api/v1/function/list.hpp"
+#include "api/v1/app/binding.hpp"
 
 // --- license ---
 #include "api/v1/license/add-time.hpp"
@@ -56,8 +58,10 @@
 #include "api/v1/license/delete.hpp"
 #include "api/v1/license/list.hpp"
 #include "api/v1/license/set-time.hpp"
+#include "api/v1/license/set-type.hpp"
 #include "api/v1/license/unban.hpp"
 #include "api/v1/license/unbind.hpp"
+#include "api/v1/license/unbind-info.hpp"
 
 // --- client ---
 #include "api/v1/client/license/remaining.hpp"
@@ -69,13 +73,17 @@
 #include "api/v1/update/latest.hpp"
 #include "api/v1/update/version/create.hpp"
 
-
 namespace tcv::api {
     inline void registerAllV1Routes(drogon::HttpAppFramework& app) {
         using tcv::inside::api::v1::common::wrap;
         using namespace drogon;
 
-        // ============ /api/v1/system（公开） ============
+        app.registerHandler(
+            "/api/v1/ping",
+            wrap(&tcv::inside::api::v1::ping::handle),
+            {Get}
+        );
+
         app.registerHandler(
             "/api/v1/system/ping",
             wrap(&tcv::inside::api::v1::system::ping::handle),
@@ -161,18 +169,8 @@ namespace tcv::api {
         );
 
         app.registerHandler(
-            "/api/v1/function/create",
-            wrap(&tcv::inside::api::v1::function::create::handle),
-            {Post}
-        );
-        app.registerHandler(
-            "/api/v1/function/list",
-            wrap(&tcv::inside::api::v1::function::list::handle),
-            {Get}
-        );
-        app.registerHandler(
-            "/api/v1/function/delete",
-            wrap(&tcv::inside::api::v1::function::delete_::handle),
+            "/api/v1/app/binding",
+            wrap(&tcv::inside::api::v1::app::binding::handle),
             {Post}
         );
 
@@ -207,6 +205,11 @@ namespace tcv::api {
             {Post}
         );
         app.registerHandler(
+            "/api/v1/license/set-type",
+            wrap(&tcv::inside::api::v1::license::set_type::handle),
+            {Post}
+        );
+        app.registerHandler(
             "/api/v1/license/unbind",
             wrap(&tcv::inside::api::v1::license::unbind::handle),
             {Post}
@@ -215,6 +218,12 @@ namespace tcv::api {
             "/api/v1/license/list",
             wrap(&tcv::inside::api::v1::license::list::handle),
             {Get}
+        );
+
+        app.registerHandler(
+            "/api/v1/license/unbind-info",
+            wrap(&tcv::inside::api::v1::license::unbind_info::handle),
+            {Get, Post}
         );
 
         app.registerHandler(
@@ -251,6 +260,6 @@ namespace tcv::api {
 
         tcv::logger().INFO("All /api/v1 routes registered");
     }
-} // namespace tcv::api
+}
 
 #endif // TCV_API_V1_REGISTER_ALL

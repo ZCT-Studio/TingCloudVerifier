@@ -61,28 +61,20 @@ namespace tcv::service {
             std::string appid;
             std::string app_secret;
             int app_status = 1;
-            int64_t func_db_id = 0;
         };
 
-        inline tcv::common::ResultOf<AppVerifyContext> verifyAppAndFunction(
-            const std::string& appid,
-            const std::string& function_id
+        inline tcv::common::ResultOf<AppVerifyContext> verifyAppOnly(
+            const std::string& appid
         ) {
             auto app = repo::AppRepo::findByAppid(appid);
             if (!app) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::APP_NOT_FOUND, "APPID 不存在");
             if (app->status != 1) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::APP_DISABLED, "APP 已禁用");
 
-            auto func = repo::FuncRepo::find(app->id, function_id);
-            if (!func) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::FUNC_NOT_FOUND, "FunctionID 不存在");
-            if (func->status != 1) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::FUNC_NOT_FOUND, "FunctionID 已禁用");
-
             AppVerifyContext ctx;
             ctx.app_db_id = app->id;
             ctx.app_owner_id = app->owner_id;
             ctx.appid = app->appid;
-            ctx.func_db_id = func->id;
             ctx.app_status = app->status;
-            // ctx.app_secret 留空：中间件持有明文密钥
             return tcv::common::ResultOf<AppVerifyContext>::ok(std::move(ctx));
         }
 

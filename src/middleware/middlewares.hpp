@@ -63,8 +63,7 @@ namespace tcv::middleware {
             auto path = req->path();
             tcv::logger().DEBUG("[MW:Bearer] path={}", path);
             bool need = path.rfind("/api/v1/app/", 0) == 0 ||
-                        path.rfind("/api/v1/license/", 0) == 0 ||
-                        path.rfind("/api/v1/function/", 0) == 0;
+                        path.rfind("/api/v1/license/", 0) == 0;
             tcv::logger().DEBUG("[MW:Bearer] need={}", need);
             if (!need) {
                 nextCb(nullptr);

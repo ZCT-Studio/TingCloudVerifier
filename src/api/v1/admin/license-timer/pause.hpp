@@ -19,22 +19,7 @@
 #ifndef TCV_API_V1_ADMIN_LICENSE_TIMER_PAUSE
 #define TCV_API_V1_ADMIN_LICENSE_TIMER_PAUSE
 
-#include <exception>
-#include <functional>
-#include <ctime>
-#include <drogon/drogon.h>
-#include <json/json.h>
-#include "api/response.hpp"
-#include "api/v1/common.hpp"
-#include "common/types.hpp"
-#include "crypto/crypto.hpp"
-#include "database/database.hpp"
-#include "models/models.hpp"
-#include "repositories/license_repo.hpp"
-#include "services/auth_app_service.hpp"
-#include "services/license_service.hpp"
-#include "services/security_service.hpp"
-#include "services/subuser_update_service.hpp"
+#include "api/v1/uih.h"
 
 namespace tcv::inside::api::v1::admin::license_timer::pause {
     inline void handle(
@@ -46,6 +31,6 @@ namespace tcv::inside::api::v1::admin::license_timer::pause {
         v["offset_seconds"] = offset;
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
-} // namespace
+}
 
 #endif // TCV_API_V1_ADMIN_LICENSE_TIMER_PAUSE

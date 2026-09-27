@@ -13,15 +13,15 @@
 // limitations under the License.
 
 //
-// Created by wanjiangzhi on 2026/9/25.
+// Created by wanjiangzhi on 2026/9/27.
 //
 
-#ifndef TCV_API_V1_LICENSE_SET_TIME
-#define TCV_API_V1_LICENSE_SET_TIME
+#ifndef TCV_API_V1_LICENSE_UNBIND_INFO
+#define TCV_API_V1_LICENSE_UNBIND_INFO
 
 #include "api/v1/uih.h"
 
-namespace tcv::inside::api::v1::license::set_time {
+namespace tcv::inside::api::v1::license::unbind_info {
     inline void handle(
         const drogon::HttpRequestPtr& req,
         std::function<void(const drogon::HttpResponsePtr &)>&& cb
@@ -42,17 +42,37 @@ namespace tcv::inside::api::v1::license::set_time {
             ));
             return;
         }
-        const bool permanent = tcv::inside::api::v1::common::paramBool(req, "permanent");
-        const int64_t exp = permanent
-            ? -1
-            : tcv::inside::api::v1::common::paramI64(req, "expires_at");
-        const auto r = tcv::service::LicenseService::setTime(id, exp);
-        cb(
-            drogon::HttpResponse::newHttpJsonResponse(
-                tcv::api::makeResponse(r.code, r.message, Json::Value{})
-            )
-        );
+
+        const auto lic = tcv::repo::LicenseRepo::findById(id);
+        if (!lic) {
+            cb(drogon::HttpResponse::newHttpJsonResponse(
+                tcv::api::makeFail(tcv::api::ErrorCode::LICENSE_NOT_FOUND, "卡密不存在")
+            ));
+            return;
+        }
+
+        // POST: 修改 unbind_limit
+        if (req->method() == drogon::Post) {
+            int new_limit = static_cast<int>(tcv::inside::api::v1::common::paramI64(req, "unbind_limit", -1));
+            if (new_limit < 0) {
+                cb(drogon::HttpResponse::newHttpJsonResponse(
+                    tcv::api::makeFail(tcv::api::ErrorCode::VALIDATION, "unbind_limit 必须 >= 0")
+                ));
+                return;
+            }
+            const auto r = tcv::service::LicenseService::setUnbindLimit(id, new_limit);
+            if (!r.success) {
+                cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeFail(r.code, r.message)));
+                return;
+            }
+        }
+
+        Json::Value v;
+        v["license_id"] = id;
+        v["unbind_count"] = lic->unbind_count;
+        v["unbind_limit"] = lic->unbind_limit;
+        cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
 }
 
-#endif // TCV_API_V1_LICENSE_SET_TIME
+#endif // TCV_API_V1_LICENSE_UNBIND_INFO

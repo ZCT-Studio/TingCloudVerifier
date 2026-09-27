@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -51,11 +57,11 @@ namespace {
             tcv::logger().ERROR("Migrations failed: {}", e.what());
         }
     }
-} // namespace
+}
 
 int main(const int argc, char** argv) {
     try {
-        std::string config_path = "config/config.yaml";
+        std::string config_path = "config.yaml";
         if (argc > 1) config_path = argv[1];
 
         tcv::logger().INFO("Server \"{}\" is running, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
@@ -68,7 +74,7 @@ int main(const int argc, char** argv) {
             tcv::AppConfig::instance().load(config_path);
         }
 
-        auto& cfg = tcv::AppConfig::instance();
+        const auto& cfg = tcv::AppConfig::instance();
         tcv::initLogger(cfg.logging().level, cfg.logging().file_path, cfg.logging().async);
         tcv::logger().INFO("Logger initialized from config");
 

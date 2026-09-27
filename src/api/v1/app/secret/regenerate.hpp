@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -13,22 +19,7 @@
 #ifndef TCV_API_V1_APP_SECRET_REGENERATE
 #define TCV_API_V1_APP_SECRET_REGENERATE
 
-#include <exception>
-#include <functional>
-#include <ctime>
-#include <drogon/drogon.h>
-#include <json/json.h>
-#include "api/response.hpp"
-#include "api/v1/common.hpp"
-#include "common/types.hpp"
-#include "crypto/crypto.hpp"
-#include "database/database.hpp"
-#include "models/models.hpp"
-#include "repositories/license_repo.hpp"
-#include "services/auth_app_service.hpp"
-#include "services/license_service.hpp"
-#include "services/security_service.hpp"
-#include "services/subuser_update_service.hpp"
+#include "api/v1/uih.h"
 
 namespace tcv::inside::api::v1::app::secret::regenerate {
     inline void handle(
@@ -42,11 +33,11 @@ namespace tcv::inside::api::v1::app::secret::regenerate {
             return;
         }
         const auto new_secret = tcv::crypto::randomHex(32);
-        tcv::repo::AppRepo::updateSecretHash(id, tcv::crypto::sha256Hex(new_secret), std::time(nullptr));
+        tcv::repo::AppRepo::updateAppSecret(id, new_secret, std::time(nullptr));
         Json::Value v;
         v["secret"] = new_secret;
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
-} // namespace
+}
 
 #endif // TCV_API_V1_APP_SECRET_REGENERATE

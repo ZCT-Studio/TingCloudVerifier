@@ -64,20 +64,11 @@ namespace tcv::models {
         std::string appid; // 纯数字随机字符串
         std::string name;
         std::string description;
-        std::string secret_hash;
+        std::string secret; // 明文 secret
+        std::string binding_mode = "NONE"; // NONE / IP / DEVICE / IP_AND_DEVICE
         int status = 1;
         int64_t created_at = 0;
         int64_t updated_at = 0;
-    };
-
-    struct Function {
-        int64_t id = 0;
-        int64_t app_id = 0;
-        std::string function_id;
-        std::string name;
-        std::string description;
-        int status = 1;
-        int64_t created_at = 0;
     };
 
     struct Session {
@@ -135,11 +126,13 @@ namespace tcv::models {
         int max_devices = 1;
         int max_ips = 1;
 
+        std::string license_type; // 自由字符串，透传给客户端
+
         int64_t created_by = 0;
         std::string created_by_role = "OWNER";
         int64_t updated_at = 0;
 
-        std::string storage_mode = "HASH";
+        std::string storage_mode = "PLAIN";
     };
 
     struct AuditLog {

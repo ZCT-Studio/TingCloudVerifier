@@ -39,6 +39,7 @@ namespace tcv::service {
         int64_t activated_at = 0;
         std::string binding_mode;
         std::string remark;
+        std::string license_type;
     };
     // 优先用 id，否则用明文卡密查 id
     inline std::optional<int64_t> resolveLicenseId(
@@ -71,6 +72,8 @@ namespace tcv::service {
             int unbind_limit = 0;
             int unbind_time_cost = 0;
             int unbind_count_cost = 0;
+            int license_length = 32; // 卡密长度 8-256
+            std::string license_type; // 自由字符串标识
         };
 
         struct CreateBatchResult {
@@ -161,7 +164,8 @@ namespace tcv::service {
                     int64_t created = 0;
                     std::string first_plain;
                     for (int64_t i = 0; i < in.count; ++i) {
-                        std::string plain = tcv::crypto::randomAlphanumeric(24);
+                        int gen_len = std::min(std::max(in.license_length, 8), 256);
+                        std::string plain = tcv::crypto::randomUppercaseAlphanumeric(gen_len);
 
                         models::License l;
                         l.app_id = app_db_id;
@@ -171,7 +175,7 @@ namespace tcv::service {
                         l.expires_at = effective_expires;
                         l.status = "unused";
                         l.banned = 0;
-                        l.binding_mode = in.binding_mode.empty() ? "NONE" : in.binding_mode;
+                        l.binding_mode = in.binding_mode.empty() ? app->binding_mode : in.binding_mode;
                         l.unbind_limit = in.unbind_limit;
                         l.unbind_time_cost = in.unbind_time_cost;
                         l.unbind_count_cost = in.unbind_count_cost;
@@ -179,6 +183,7 @@ namespace tcv::service {
                         l.created_by_role = in.owner_role;
                         l.updated_at = now;
                         l.storage_mode = "PLAIN";
+                        l.license_type = in.license_type;
 
                         repo::LicenseRepo::insert(l);
                         ++created;
@@ -217,6 +222,9 @@ namespace tcv::service {
         inline LicenseVerifyResult verify(const LicenseVerifyInput& in, int64_t app_id) {
             LicenseVerifyResult out;
 
+            auto app = repo::AppRepo::findById(app_id);
+            std::string app_binding = app ? app->binding_mode : "NONE";
+
             auto lic = repo::LicenseRepo::findByAppAndLicense(app_id, in.license_plain);
             if (!lic) {
                 out.code = api::ErrorCode::LICENSE_NOT_FOUND;
@@ -239,7 +247,10 @@ namespace tcv::service {
                 return out;
             }
 
-            std::string b_mode = lic->binding_mode;
+            // APP binding mode 覆盖 license 自己的 binding_mode
+            // NONE: 不绑，DEVICE/IP/IP_AND_DEVICE: 按模式绑
+            std::string b_mode = (app_binding == "NONE") ? "NONE" : app_binding;
+
             if (b_mode == "IP" || b_mode == "IP_AND_DEVICE") {
                 std::string ip_hash = tcv::crypto::sha256Hex(in.ip);
                 if (lic->bound_ip_hash && *lic->bound_ip_hash != ip_hash) {
@@ -250,8 +261,9 @@ namespace tcv::service {
 
                 if (!lic->bound_ip_hash) {
                     int64_t now = std::time(nullptr);
-                    if (b_mode == "IP") repo::LicenseRepo::bindIp(lic->id, ip_hash, now);
-                    else {
+                    if (b_mode == "IP") {
+                        repo::LicenseRepo::bindIp(lic->id, ip_hash, now);
+                    } else {
                         std::string dev_hash = tcv::crypto::sha256Hex(in.device.value_or(""));
                         repo::LicenseRepo::bindIpAndDevice(lic->id, ip_hash, dev_hash, now);
                     }
@@ -298,6 +310,7 @@ namespace tcv::service {
             out.activated_at = lic->activated_at.value_or(0);
             out.binding_mode = b_mode;
             out.remark = lic->remark;
+            out.license_type = lic->license_type;
             return out;
         }
 
@@ -469,7 +482,26 @@ namespace tcv::service {
             return tcv::common::Result::ok();
         }
 
-        inline tcv::common::Result removeLicense(int64_t license_id, bool hard = false) {
+        inline tcv::common::Result setType(int64_t license_id, const std::string& new_license_type) {
+            const auto lic = repo::LicenseRepo::findById(license_id);
+            if (!lic) return tcv::common::Result::fail(5001, "卡密不存在");
+            repo::LicenseRepo::updateField(license_id, "expires_at", new_license_type);
+            repo::AuditRepo::log(
+                "OWNER",
+                lic->created_by,
+                "LicenseSetType",
+                "LICENSE",
+                license_id,
+                std::format("set={}", new_license_type),
+                "success",
+                "",
+                "{}",
+                std::time(nullptr)
+            );
+            return tcv::common::Result::ok();
+        }
+
+        inline tcv::common::Result removeLicense(int64_t license_id, const bool hard = false) {
             const auto lic = repo::LicenseRepo::findById(license_id);
             if (!lic) return tcv::common::Result::fail(5001, "卡密不存在");
             if (hard) repo::LicenseRepo::hardDelete(license_id);
@@ -508,7 +540,15 @@ namespace tcv::service {
             v["binding_mode"] = lic.binding_mode;
             v["activated_at"] = lic.activated_at.value_or(0);
             v["expires_at"] = lic.expires_at;
+            v["license_type"] = lic.license_type;
             return v;
+        }
+
+        inline tcv::common::Result setUnbindLimit(const int64_t license_id, int new_limit) {
+            if (const auto lic = repo::LicenseRepo::findById(license_id); !lic) return tcv::common::Result::fail(5001, "卡密不存在");
+            if (new_limit < 0) new_limit = 0;
+            repo::LicenseRepo::updateFieldInt(license_id, "unbind_limit", new_limit);
+            return tcv::common::Result::ok();
         }
     } // namespace LicenseService
 } // namespace tcv::service

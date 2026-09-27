@@ -87,6 +87,7 @@ namespace tcv::repo {
             l.created_by_role = getStr(r, "created_by_role");
             l.updated_at = getInt(r, "updated_at");
             l.storage_mode = getStr(r, "storage_mode");
+            l.license_type = getStr(r, "license_type");
             return l;
         }
 
@@ -142,8 +143,8 @@ namespace tcv::repo {
                 "status, banned, binding_mode, bound_ip_hash, bound_device_hash, "
                 "last_used_at, last_used_ip, last_used_device_hash, "
                 "unbind_count, unbind_limit, unbind_time_cost, unbind_count_cost, "
-                "max_devices, max_ips, created_by, created_by_role, updated_at, storage_mode"
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "max_devices, max_ips, created_by, created_by_role, updated_at, storage_mode, license_type"
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 l.app_id,
                 l.license,
                 l.remark,
@@ -167,7 +168,8 @@ namespace tcv::repo {
                 l.created_by,
                 l.created_by_role,
                 l.updated_at,
-                l.storage_mode
+                l.storage_mode,
+                l.license_type
             );
             return tcv::db::Database::instance().lastInsertId();
         }
@@ -275,6 +277,26 @@ namespace tcv::repo {
             auto rows = tcv::db::Database::instance().queryParams(
                 "SELECT * FROM licenses WHERE app_id = ? AND status != 'deleted' ORDER BY id DESC LIMIT ?",
                 app_id,
+                limit
+            );
+            std::vector<tcv::models::License> out;
+            out.reserve(rows.size());
+            for (auto& r : rows) out.push_back(fromRow(r));
+            return out;
+        }
+
+        inline std::vector<tcv::models::License> listByAppAndCreator(
+            int64_t app_id,
+            int64_t created_by,
+            const std::string& created_by_role,
+            int limit = 200
+        ) {
+            auto rows = tcv::db::Database::instance().queryParams(
+                "SELECT * FROM licenses WHERE app_id = ? AND created_by = ? AND created_by_role = ? "
+                "AND status != 'deleted' ORDER BY id DESC LIMIT ?",
+                app_id,
+                created_by,
+                created_by_role,
                 limit
             );
             std::vector<tcv::models::License> out;
