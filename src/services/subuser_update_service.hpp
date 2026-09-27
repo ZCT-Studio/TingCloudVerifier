@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -130,6 +130,9 @@ namespace tcv::service {
             const std::string& channel,
             const std::string& description
         ) {
+            if (!repo::AppRepo::findById(app_id)) {
+                return tcv::common::ResultOf<int64_t>::fail(3001, "APP 不存在");
+            }
             db::Database::instance().execParams(
                 "INSERT OR IGNORE INTO update_channels(app_id, channel, description, created_at)"
                 " VALUES (?, ?, ?, ?)",
@@ -157,13 +160,6 @@ namespace tcv::service {
             const std::string& minimum_version
         ) {
             int64_t now = std::time(nullptr);
-            db::Database::instance().execParams(
-                "INSERT INTO update_channels(app_id, channel, description, created_at)"
-                " SELECT app_id, 'stable', 'auto', ? WHERE NOT EXISTS(SELECT 1 FROM update_channels WHERE id = ?)",
-                now,
-                channel_id
-            );
-
             db::Database::instance().execParams(
                 "INSERT INTO update_versions(channel_id, version, release_time, download_url, file_hash, "
                 "hash_algorithm, changelog, minimum_version, created_at)"
