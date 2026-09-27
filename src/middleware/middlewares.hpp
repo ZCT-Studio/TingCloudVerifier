@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -221,6 +227,6 @@ namespace tcv::middleware {
         app.registerMiddleware(std::make_shared<AdminAuthMiddleware>());
         app.registerMiddleware(std::make_shared<AppSignatureMiddleware>());
     }
-} // namespace tcv::middleware
+}
 
 #endif // TCV_MIDDLEWARE_MIDDLEWARES

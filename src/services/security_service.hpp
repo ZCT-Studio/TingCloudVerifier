@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //
 // Created by wanjiangzhi on 2026/9/25.
@@ -28,7 +34,6 @@ namespace tcv::service {
             const std::string_view method,
             const std::string_view path,
             const std::string_view appid,
-            const std::string_view functionid,
             const std::string_view timestamp,
             const std::string_view nonce,
             const std::string_view encode
@@ -40,8 +45,6 @@ namespace tcv::service {
             s.append(path);
             s.push_back('\n');
             s.append(appid);
-            s.push_back('\n');
-            s.append(functionid);
             s.push_back('\n');
             s.append(timestamp);
             s.push_back('\n');
@@ -66,7 +69,7 @@ namespace tcv::service {
         inline tcv::common::ResultOf<AppVerifyContext> verifyAppOnly(
             const std::string& appid
         ) {
-            auto app = repo::AppRepo::findByAppid(appid);
+            const auto app = repo::AppRepo::findByAppid(appid);
             if (!app) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::APP_NOT_FOUND, "APPID 不存在");
             if (app->status != 1) return tcv::common::ResultOf<AppVerifyContext>::fail(api::ErrorCode::APP_DISABLED, "APP 已禁用");
 
@@ -88,7 +91,6 @@ namespace tcv::service {
             const std::string& method,
             const std::string& path,
             const std::string& appid,
-            const std::string& function_id,
             const std::string& timestamp_str,
             const std::string& nonce,
             const std::string& encode,
@@ -117,7 +119,7 @@ namespace tcv::service {
             // 在中间件里再用 db_id 调 NonceRepo::tryUseNonce
             (void)appid_hash;
 
-            const auto canonical = canonicalRequest(method, path, appid, function_id, timestamp_str, nonce, encode);
+            const auto canonical = canonicalRequest(method, path, appid, timestamp_str, nonce, encode);
             if (const auto expected = computeSignature(canonical, app_secret); expected != signature) {
                 r.code = api::ErrorCode::SIGNATURE_BAD;
                 r.message = "signature 校验失败";
@@ -153,6 +155,6 @@ namespace tcv::service {
         std::mutex mtx_;
         std::unordered_map<std::string, std::deque<int64_t>> buckets_;
     };
-} // namespace tcv::service
+}
 
 #endif // TCV_SERVICES_SECURITY_SERVICE
