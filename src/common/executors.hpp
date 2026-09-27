@@ -5,6 +5,16 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//
+// Created by wanjiangzhi on 2026/9/25.
+//
 
 #ifndef TCV_COMMON_EXECUTORS_HPP
 #define TCV_COMMON_EXECUTORS_HPP
@@ -18,8 +28,8 @@
 #include "ZCLibLog/inside/logger_types.hpp"
 
 namespace tcv::logging {
-    struct file_and_console : ZCLibLog::executor_api {
-        explicit file_and_console(std::string log_path, bool console_only = false)
+    struct tcv_executor : ZCLibLog::executor_api {
+        explicit tcv_executor(std::string log_path, bool console_only = false)
             : log_path_(std::move(log_path)),
               console_only_(console_only) {
             if (console_only_) return;
@@ -35,17 +45,17 @@ namespace tcv::logging {
             }
         }
 
-        ~file_and_console() override {
+        ~tcv_executor() override {
             if (ofs_.is_open()) {
                 ofs_.flush();
                 ofs_.close();
             }
         }
 
-        file_and_console(const file_and_console&) = delete;
-        file_and_console& operator=(const file_and_console&) = delete;
-        file_and_console(file_and_console&&) noexcept = default;
-        file_and_console& operator=(file_and_console&&) noexcept = default;
+        tcv_executor(const tcv_executor&) = delete;
+        tcv_executor& operator=(const tcv_executor&) = delete;
+        tcv_executor(tcv_executor&&) noexcept = default;
+        tcv_executor& operator=(tcv_executor&&) noexcept = default;
 
         void do_execute(ELString msg, ELogLevel lv) override {
             if (ofs_.is_open()) {
@@ -65,6 +75,6 @@ namespace tcv::logging {
         bool console_only_;
         std::ofstream ofs_;
     };
-} // namespace tcv::logging
+}
 
 #endif // TCV_COMMON_EXECUTORS_HPP

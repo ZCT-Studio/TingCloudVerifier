@@ -49,13 +49,14 @@
 #include "common/executors.hpp"
 
 namespace tcv {
-    using LoggerSyncT = ZCLibLog::LoggerSync<logging::stdcxx20>;
-    using LoggerAsyncT = ZCLibLog::LoggerAsync<logging::stdcxx20>;
+    using LoogerFormatter = logging::tcv_formatter;
+    using LoggerSyncT = ZCLibLog::LoggerSync<LoogerFormatter>;
+    using LoggerAsyncT = ZCLibLog::LoggerAsync<LoogerFormatter>;
 
     inline ZCLibLog::LogLevel logLevelFromString(std::string_view s) {
         std::string up;
         up.reserve(s.size());
-        for (char c : s) {
+        for (const char c : s) {
             if (c != ' ' && c != '\t' && c != '\r' && c != '\n') {
                 up.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
             }
@@ -153,7 +154,7 @@ namespace tcv {
         const auto lv = logLevelFromString(level);
         ZCLibLog::LogLevelCfg level_cfg(lv, ZCLibLog::LogLevel::OFF);
 
-        auto ex = ZCLibLog::executor::make<tcv::logging::file_and_console>(file_path, false);
+        auto ex = ZCLibLog::executor::make<tcv::logging::tcv_executor>(file_path, false);
         std::initializer_list executors{std::move(ex)};
 
         if (async) {
@@ -171,12 +172,12 @@ namespace tcv {
                 std::in_place_index<0>,
                 tcv::constants::PROJECT_NAME,
                 std::initializer_list{
-                    ZCLibLog::executor::make<tcv::logging::file_and_console>(std::string{}, true)
+                    ZCLibLog::executor::make<tcv::logging::tcv_executor>(std::string{}, true)
                 }
             );
         }
         return Logger(&*s);
     }
-} // namespace tcv
+}
 
 #endif // TCV_COMMON_LOGGER_HPP

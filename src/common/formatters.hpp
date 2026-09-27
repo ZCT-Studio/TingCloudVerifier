@@ -5,6 +5,16 @@
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//
+// Created by wanjiangzhi on 2026/9/25.
+//
 
 #ifndef TCV_COMMON_FORMATTERS_HPP
 #define TCV_COMMON_FORMATTERS_HPP
@@ -15,30 +25,18 @@
 #include <string>
 #include <thread>
 
-#include "ZCLibLog/formatters/basic_formatter.hpp"
 #include "ZCLibLog/formatters/format_apis/stdcxx20format.hpp"
 
 namespace tcv::logging {
-    /**
-     * @file formatters.hpp
-     * @brief TingCloudVerifier 使用的 ZCLibLog formatter
-     *
-     * 输出格式：
-     *   2026-09-26 15:22:31.802 [T1234] [INFO] [TingCloudVerifier] logger initialized
-     *      时间戳(ms)            线程ID    等级   logger 名字          用户消息
-     */
-
-    struct stdcxx20 : ZCLibLog::format_apis::stdcxx20format {
+    struct tcv_formatter : ZCLibLog::format_apis::stdcxx20format {
         template <typename... Args>
         static std::string do_format(
             ZCLibLog::FLogPack pack,
             const std::format_string<Args...>& fmt,
             Args&&... args
         ) {
-            // 用户消息
             std::string f_msg = std::format(fmt, std::forward<Args>(args)...);
 
-            // 时间戳（毫秒精度）
             auto t = static_cast<std::time_t>(pack.time / 1000);
             const auto ms = static_cast<short>(pack.time % 1000);
             std::tm tm{};
@@ -53,11 +51,9 @@ namespace tcv::logging {
             thread_local std::array<char, 64> time_buf;
             std::strftime(time_buf.data(), time_buf.size(), "%Y-%m-%d %H:%M:%S", &tm);
 
-            // 线程 ID（hash 成数字，跨平台稳定）
             auto tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
 
-            // 等级名
-            const char* level = "OUT";
+            auto level = "OUT";
             switch (pack.level) {
                 case ZCLibLog::LogLevel::TRACE: level = "TRACE";
                     break;
@@ -80,11 +76,11 @@ namespace tcv::logging {
                 ms,
                 tid,
                 level,
-                pack.name->c_str(),
+                *pack.name,
                 f_msg
             );
         }
     };
-} // namespace tcv::logging
+}
 
 #endif // TCV_COMMON_FORMATTERS_HPP

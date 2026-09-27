@@ -27,8 +27,10 @@
 #include "database/database.hpp"
 #include "api/v1/register_all.hpp"
 
+#include "binary-c-array/config.yaml.hpp"
+
 namespace {
-    void ensureDirectory(const std::string& path) {
+    void ensureDirectory(const std::filesystem::path& path) {
         try { std::filesystem::create_directories(path); } catch (...) {}
     }
 
@@ -38,8 +40,8 @@ namespace {
             tcv::logger().FATAL("Non-SQLite backend not implemented yet");
             std::exit(1);
         }
-        auto p = std::filesystem::path(cfg.database().sqlite_path);
-        if (p.has_parent_path()) ensureDirectory(p.parent_path().string());
+        const auto p = std::filesystem::path(cfg.database().sqlite_path);
+        if (p.has_parent_path()) ensureDirectory(p.parent_path());
 
         auto& db = tcv::db::Database::instance();
         db.open(cfg.database().sqlite_path);
@@ -57,22 +59,47 @@ namespace {
             tcv::logger().ERROR("Migrations failed: {}", e.what());
         }
     }
+
+    void extractDefaultConfig(const std::filesystem::path& path) {
+        ensureDirectory(path.parent_path());
+
+        std::ofstream file(path, std::ios::binary);
+
+        if (!file) {
+            throw std::runtime_error("Failed to create config.yaml");
+        }
+
+        file.write(
+            reinterpret_cast<const char*>(config_yaml),
+            config_yaml_len
+        );
+
+        if (!file) {
+            throw std::runtime_error("Failed to write config.yaml");
+        }
+    }
 }
 
 int main(const int argc, char** argv) {
     try {
-        std::string config_path = "config.yaml";
-        if (argc > 1) config_path = argv[1];
+        const std::string config_path = argc > 1 ? argv[1] : "config.yaml";
 
-        tcv::logger().INFO("Server \"{}\" is running, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
         tcv::logger().INFO("Config path: \"{}\"", std::filesystem::absolute(config_path).string());
 
         if (!std::filesystem::exists(config_path)) {
-            tcv::logger().WARN("Config file not found, falling back to defaults");
-        } else {
-            tcv::logger().INFO("Loading config...");
-            tcv::AppConfig::instance().load(config_path);
+            tcv::logger().WARN("Config file not found, extract default config");
+
+            extractDefaultConfig(config_path);
+
+            tcv::logger().WARN("Default configuration generated successfully. Please modify it and restart the application");
+
+            return 0;
         }
+
+        tcv::logger().INFO("Server \"{}\" is running, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
+
+        tcv::logger().INFO("Loading config...");
+        tcv::AppConfig::instance().load(config_path);
 
         const auto& cfg = tcv::AppConfig::instance();
         tcv::initLogger(cfg.logging().level, cfg.logging().file_path, cfg.logging().async);
