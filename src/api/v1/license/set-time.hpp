@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,7 +45,10 @@ namespace tcv::inside::api::v1::license::set_time {
             return;
         }
         const int64_t id = *id_opt;
-        const int64_t exp = tcv::inside::api::v1::common::paramI64(req, "expires_at");
+        const bool permanent = tcv::inside::api::v1::common::paramBool(req, "permanent");
+        const int64_t exp = permanent
+            ? -1
+            : tcv::inside::api::v1::common::paramI64(req, "expires_at");
         const auto r = tcv::service::LicenseService::setTime(id, exp);
         cb(
             drogon::HttpResponse::newHttpJsonResponse(
