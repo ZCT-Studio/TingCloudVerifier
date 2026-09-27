@@ -1,4 +1,4 @@
-# /api/v1/license/list
+﻿# /api/v1/license/list
 
 **方法**: GET
 
@@ -14,5 +14,5 @@ curl -s 'http://127.0.0.1:10211/api/v1/license/list?app_id=1&page=1&page_size=20
 ## 响应
 
 ``json
-{"code":0,"data":{"total":10,"items":[{"id":1,"license_hash":"...","status":"unused","expires_at":"2026-09-27 15:20:00"}]},"message":"OK"}
+{"code":0,"data":{"total":10,"items":[{"id":1,"license":"...","status":"unused","expires_at":"2026-09-27 15:20:00"}]},"message":"OK"}
 ``
