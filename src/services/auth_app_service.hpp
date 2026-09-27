@@ -6,8 +6,15 @@
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
-// Created by wanjiangzhi on 2026/9/25.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+//
+// Created by wanjiangzhi on 2026/9/25.
+//
 
 #ifndef TCV_SERVICES_AUTH_APP_SERVICE
 #define TCV_SERVICES_AUTH_APP_SERVICE
@@ -292,7 +299,7 @@ namespace tcv::service {
             if (!app) return false;
             return secret_try == app->secret;
         }
-    } // namespace AppService
-} // namespace tcv::service
+    }
+}
 
 #endif // TCV_SERVICES_AUTH_APP_SERVICE
