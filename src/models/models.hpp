@@ -108,7 +108,7 @@ namespace tcv::models {
     struct License {
         int64_t id = 0;
         int64_t app_id = 0;
-        std::string license_hash;
+        std::string license;
         std::string remark;
 
         int64_t created_at = 0;

@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "uuid": "a77024c8-f386-44df-b531-d9f122d7bc43",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "a77024c8-f386-44df-b531-d9f122d7bc43_tingcloud.db",
+      "version": 1,
+      "deletedAt": "2026-09-26T15:12:12.543Z"
+    },
+    {
+      "uuid": "b1322b08-523c-40bd-b177-3c69fb29fcae",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "b1322b08-523c-40bd-b177-3c69fb29fcae_tingcloud.db",
+      "version": 2,
+      "deletedAt": "2026-09-26T15:18:33.187Z"
+    },
+    {
+      "uuid": "cfc5fbca-d778-49b0-be88-b7c08e4da8e5",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "cfc5fbca-d778-49b0-be88-b7c08e4da8e5_tingcloud.db",
+      "version": 3,
+      "deletedAt": "2026-09-26T15:21:56.717Z"
+    },
+    {
+      "uuid": "b1db1017-ad0d-4a17-ac22-b0cec10729a9",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "b1db1017-ad0d-4a17-ac22-b0cec10729a9_tingcloud.db",
+      "version": 4,
+      "deletedAt": "2026-09-26T15:27:17.534Z"
+    },
+    {
+      "uuid": "36d78dc3-c694-45cf-88b0-19e75dec8148",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "36d78dc3-c694-45cf-88b0-19e75dec8148_tingcloud.db",
+      "version": 5,
+      "deletedAt": "2026-09-26T15:27:37.662Z"
+    },
+    {
+      "uuid": "f9084b71-a69e-4490-9a01-f85a48df82dd",
+      "originalPath": "D:\\Projects\\wanjiangzhi\\CLionProjects\\TingCloudVerifier\\tingcloud.db",
+      "trashName": "f9084b71-a69e-4490-9a01-f85a48df82dd_tingcloud.db",
+      "version": 6,
+      "deletedAt": "2026-09-26T15:28:56.057Z"
+    }
+  ]
+}

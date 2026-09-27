@@ -46,8 +46,7 @@ namespace tcv::inside::api::v1::client::license::remaining {
             );
             return;
         }
-        const auto lhash = tcv::service::hashLicense(license_plain);
-        const auto lic = tcv::repo::LicenseRepo::findByAppAndHash(app->id, lhash);
+        const auto lic = tcv::repo::LicenseRepo::findByAppAndLicense(app->id, license_plain);
         if (!lic) {
             cb(
                 drogon::HttpResponse::newHttpJsonResponse(

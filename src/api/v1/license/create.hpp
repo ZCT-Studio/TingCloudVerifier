@@ -36,7 +36,7 @@ namespace tcv::inside::api::v1::license::create {
         std::function<void(const drogon::HttpResponsePtr &)>&& cb
     ) {
         tcv::service::LicenseService::CreateBatchInput in;
-        in.app_id = tcv::inside::api::v1::common::paramI64(req, "app_id");
+        in.app_id = tcv::inside::api::v1::common::paramStr(req, "app_id");
         in.count = tcv::inside::api::v1::common::paramI64(req, "count", 1);
         in.seconds_per_license = tcv::inside::api::v1::common::paramI64(req, "seconds_per_license", 86400);
         in.owner_id = tcv::inside::api::v1::common::currentUserId(req);

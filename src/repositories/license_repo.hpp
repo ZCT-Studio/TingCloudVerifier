@@ -64,7 +64,7 @@ namespace tcv::repo {
             tcv::models::License l;
             l.id = getInt(r, "id");
             l.app_id = getInt(r, "app_id");
-            l.license_hash = getStr(r, "license_hash");
+            l.license = getStr(r, "license");
             l.remark = getStr(r, "remark");
             l.created_at = getInt(r, "created_at");
             l.activated_at = getOptInt(r, "activated_at");
@@ -99,14 +99,37 @@ namespace tcv::repo {
             return fromRow(rows[0]);
         }
 
-        inline std::optional<tcv::models::License> findByAppAndHash(
+
+        // 优先用 id，否则用明文卡密查 id
+        inline std::optional<int64_t> resolveLicenseId(
+            int64_t license_id,
+            const std::string& license_str,
+            int64_t app_id = 0
+        ) {
+            if (license_id > 0) return license_id;
+            if (license_str.empty()) return std::nullopt;
+
+            const char* sql = app_id > 0
+                ? "SELECT id FROM licenses WHERE app_id = ? AND license = ? AND status != 'deleted'"
+                : "SELECT id FROM licenses WHERE license = ? AND status != 'deleted'";
+
+            if (app_id > 0) {
+                auto rows = tcv::db::Database::instance().queryParams(sql, app_id, license_str);
+                if (!rows.empty()) return repo::getInt(rows[0], "id");
+            } else {
+                auto rows = tcv::db::Database::instance().queryParams(sql, license_str);
+                if (!rows.empty()) return repo::getInt(rows[0], "id");
+            }
+            return std::nullopt;
+        }
+        inline std::optional<tcv::models::License> findByAppAndLicense(
             int64_t app_id,
-            const std::string& license_hash
+            const std::string& license
         ) {
             const auto rows = tcv::db::Database::instance().queryParams(
-                "SELECT * FROM licenses WHERE app_id = ? AND license_hash = ? AND status != 'deleted'",
+                "SELECT * FROM licenses WHERE app_id = ? AND license = ? AND status != 'deleted'",
                 app_id,
-                license_hash
+                license
             );
             if (rows.empty()) return std::nullopt;
             return fromRow(rows[0]);
@@ -115,14 +138,14 @@ namespace tcv::repo {
         inline int64_t insert(const tcv::models::License& l) {
             tcv::db::Database::instance().execParams(
                 "INSERT INTO licenses("
-                "app_id, license_hash, remark, created_at, activated_at, expires_at, "
+                "app_id, license, remark, created_at, activated_at, expires_at, "
                 "status, banned, binding_mode, bound_ip_hash, bound_device_hash, "
                 "last_used_at, last_used_ip, last_used_device_hash, "
                 "unbind_count, unbind_limit, unbind_time_cost, unbind_count_cost, "
                 "max_devices, max_ips, created_by, created_by_role, updated_at, storage_mode"
                 ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 l.app_id,
-                l.license_hash,
+                l.license,
                 l.remark,
                 l.created_at,
                 l.activated_at,

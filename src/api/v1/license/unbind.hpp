@@ -36,7 +36,16 @@ namespace tcv::inside::api::v1::license::unbind {
         std::function<void(const drogon::HttpResponsePtr &)>&& cb
     ) {
         tcv::service::LicenseService::UnbindInput in;
-        in.license_id = tcv::inside::api::v1::common::paramI64(req, "license_id");
+        const int64_t id_raw = tcv::inside::api::v1::common::paramI64(req, "license_id");
+        const std::string lic_plain = tcv::inside::api::v1::common::paramStr(req, "license");
+        auto id_opt = tcv::service::resolveLicenseId(id_raw, lic_plain);
+        if (!id_opt) {
+            cb(drogon::HttpResponse::newHttpJsonResponse(
+                tcv::api::makeResponse(4000, "请传 license_id 或 license", Json::Value{})
+            ));
+            return;
+        }
+        in.license_id = *id_opt;
         in.reason = tcv::inside::api::v1::common::paramStr(req, "reason");
         in.operator_id = tcv::inside::api::v1::common::currentUserId(req);
         in.operator_role = tcv::inside::api::v1::common::paramStr(req, "_owner_role", "OWNER");

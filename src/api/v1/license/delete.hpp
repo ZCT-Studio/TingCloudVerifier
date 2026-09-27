@@ -35,11 +35,20 @@ namespace tcv::inside::api::v1::license::delete_ {
         const drogon::HttpRequestPtr& req,
         std::function<void(const drogon::HttpResponsePtr &)>&& cb
     ) {
-        const int64_t id = tcv::inside::api::v1::common::paramI64(
-            req,
-            "license_id",
-            tcv::inside::api::v1::common::paramI64(req, "id")
-        );
+                  const int64_t id_raw = tcv::inside::api::v1::common::paramI64(
+              req,
+              "license_id",
+              tcv::inside::api::v1::common::paramI64(req, "id")
+          );
+          const std::string lic_plain = tcv::inside::api::v1::common::paramStr(req, "license");
+          auto id_opt = tcv::service::resolveLicenseId(id_raw, lic_plain);
+          if (!id_opt) {
+              cb(drogon::HttpResponse::newHttpJsonResponse(
+                  tcv::api::makeResponse(4000, "请传 license_id 或 license", Json::Value{})
+              ));
+              return;
+          }
+          const int64_t id = *id_opt;
         const bool hard = tcv::inside::api::v1::common::paramStr(req, "hard", "0") == "1";
         const auto r = tcv::service::LicenseService::removeLicense(id, hard);
         cb(

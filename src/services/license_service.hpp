@@ -40,11 +40,14 @@ namespace tcv::service {
         std::string binding_mode;
         std::string remark;
     };
-
-    inline std::string hashLicense(const std::string_view plain) {
-        return tcv::crypto::sha256Hex(plain);
+    // 优先用 id，否则用明文卡密查 id
+    inline std::optional<int64_t> resolveLicenseId(
+        int64_t license_id,
+        const std::string& license_plain,
+        int64_t app_id = 0
+    ) {
+        return repo::LicenseRepo::resolveLicenseId(license_id, license_plain, app_id);
     }
-
     namespace LicenseService {
         inline int64_t virtualNow() {
             return repo::GlobalTimer::effectiveNow(std::time(nullptr));
@@ -58,7 +61,7 @@ namespace tcv::service {
         }
 
         struct CreateBatchInput {
-            int64_t app_id;
+            std::string app_id;
             int64_t count;
             int64_t seconds_per_license; // -1 = 永久
             int64_t owner_id;
@@ -74,16 +77,18 @@ namespace tcv::service {
             bool success{};
             int64_t actual_created = 0;
             std::string first_license_plain; // 返回第一条明文卡密用于通知
+            std::vector<std::string> plain_licenses; // 返回全部明文卡密
             std::string error;
         };
 
         inline CreateBatchResult createBatch(const CreateBatchInput& in) {
             CreateBatchResult r;
-            auto app = repo::AppRepo::findById(in.app_id);
+            auto app = repo::AppRepo::findByAppid(in.app_id);
             if (!app) {
                 r.error = "APP 不存在";
                 return r;
             }
+            const int64_t app_db_id = app->id;
 
             int64_t cost_per = 1; // 每张卡消耗 1 额度
             int64_t total_cost = cost_per * in.count;
@@ -157,11 +162,10 @@ namespace tcv::service {
                     std::string first_plain;
                     for (int64_t i = 0; i < in.count; ++i) {
                         std::string plain = tcv::crypto::randomAlphanumeric(24);
-                        std::string lhash = hashLicense(plain);
 
                         models::License l;
-                        l.app_id = in.app_id;
-                        l.license_hash = lhash;
+                        l.app_id = app_db_id;
+                        l.license = plain;
                         l.remark = in.remark;
                         l.created_at = now;
                         l.expires_at = effective_expires;
@@ -174,10 +178,11 @@ namespace tcv::service {
                         l.created_by = in.owner_id;
                         l.created_by_role = in.owner_role;
                         l.updated_at = now;
-                        l.storage_mode = "HASH";
+                        l.storage_mode = "PLAIN";
 
                         repo::LicenseRepo::insert(l);
                         ++created;
+                        r.plain_licenses.push_back(plain);
                         if (first_plain.empty()) first_plain = plain;
                     }
 
@@ -199,7 +204,7 @@ namespace tcv::service {
                 in.owner_id,
                 "CreateLicense",
                 "APP",
-                in.app_id,
+                app_db_id,
                 std::format("count={},sec={}", in.count, in.seconds_per_license),
                 "success",
                 "",
@@ -212,8 +217,7 @@ namespace tcv::service {
         inline LicenseVerifyResult verify(const LicenseVerifyInput& in, int64_t app_id) {
             LicenseVerifyResult out;
 
-            std::string lhash = hashLicense(in.license_plain);
-            auto lic = repo::LicenseRepo::findByAppAndHash(app_id, lhash);
+            auto lic = repo::LicenseRepo::findByAppAndLicense(app_id, in.license_plain);
             if (!lic) {
                 out.code = api::ErrorCode::LICENSE_NOT_FOUND;
                 out.message = "卡密不存在";
