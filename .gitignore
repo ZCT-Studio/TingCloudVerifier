@@ -27,3 +27,9 @@ config/config.yaml
 
 # Dependency cache
 vcpkg/
+
+# PowerShell temp files
+.trash/
+exec-approvals.json
+ps-exe.txt
+*.ps1.bak
