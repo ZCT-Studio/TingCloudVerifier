@@ -269,7 +269,17 @@ namespace tcv::service {
             }
             const std::string secret = tcv::crypto::randomHex(32);
             const int64_t now = std::time(nullptr);
-            int64_t id = repo::AppRepo::insert(owner_id, appid, name, description, secret, now);
+            int64_t app_db_id = repo::AppRepo::insert(owner_id, appid, name, description, secret, now);
+
+            // 自动创建 4 个默认频道
+            for (auto& ch : {"stable", "rc", "canary", "alpha"}) {
+                tcv::db::Database::instance().execParams(
+                    "INSERT OR IGNORE INTO update_channels(app_id, channel, created_at) VALUES (?, ?, ?)",
+                    app_db_id,
+                    ch,
+                    now
+                );
+            }
 
             return tcv::common::ResultOf<AppSecretPair>::ok({appid, secret});
         }

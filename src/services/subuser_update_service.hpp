@@ -183,6 +183,29 @@ namespace tcv::service {
             return tcv::common::ResultOf<int64_t>::ok(db::Database::instance().lastInsertId());
         }
 
+        inline std::vector<Json::Value> listChannels(const std::string& appid) {
+            std::vector<Json::Value> out;
+            auto app = repo::AppRepo::findByAppid(appid);
+            if (!app) return out;
+            auto rows = db::Database::instance().queryParams(
+                "SELECT c.id, c.channel, c.description, "
+                "(SELECT v.version FROM update_versions v WHERE v.channel_id = c.id ORDER BY v.release_time DESC LIMIT 1) AS latest_version "
+                "FROM update_channels c WHERE c.app_id = ? ORDER BY c.id ASC",
+                app->id
+            );
+            for (auto& r : rows) {
+                Json::Value v;
+                v["channel_id"] = static_cast<Json::Int64>(repo::getInt(r, "id"));
+                v["channel"] = repo::getStr(r, "channel");
+                v["description"] = repo::getStr(r, "description");
+                std::string lv = repo::getStr(r, "latest_version");
+                v["has_version"] = !lv.empty();
+                if (!lv.empty()) v["latest_version"] = lv;
+                out.push_back(std::move(v));
+            }
+            return out;
+        }
+
         inline Json::Value getLatest(const std::string& appid, const std::string& channel = "stable") {
             Json::Value out;
             out["found"] = false;

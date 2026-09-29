@@ -52,6 +52,10 @@
 #include "api/v1/app/binding.hpp"
 #include "api/v1/app/set-decode.hpp"
 #include "api/v1/app/sign-enable.hpp"
+#include "api/v1/app/notice.hpp"
+#include "api/v1/app/version/create.hpp"
+#include "api/v1/app/version/latest.hpp"
+#include "api/v1/app/channel/list.hpp"
 
 // --- license ---
 #include "api/v1/license/add-time.hpp"
@@ -69,11 +73,9 @@
 #include "api/v1/client/license/remaining.hpp"
 #include "api/v1/client/license/status.hpp"
 #include "api/v1/client/license/verify.hpp"
-
-// --- update ---
-#include "api/v1/update/channel/create.hpp"
-#include "api/v1/update/latest.hpp"
-#include "api/v1/update/version/create.hpp"
+#include "api/v1/client/app/notice.hpp"
+#include "api/v1/client/app/version.hpp"
+#include "api/v1/client/app/channels.hpp"
 
 namespace tcv::api {
     inline void registerAllV1Routes(drogon::HttpAppFramework& app) {
@@ -185,6 +187,26 @@ namespace tcv::api {
             wrap(&tcv::inside::api::v1::app::sign_enable::handle),
             {Post}
         );
+        app.registerHandler(
+            "/api/v1/app/notice",
+            wrap(&tcv::inside::api::v1::app::notice::handle),
+            {Post}
+        );
+        app.registerHandler(
+            "/api/v1/app/version/create",
+            wrap(&tcv::inside::api::v1::app::version::create_::handle),
+            {Post}
+        );
+        app.registerHandler(
+            "/api/v1/app/version/latest",
+            wrap(&tcv::inside::api::v1::app::version::latest::handle),
+            {Get}
+        );
+        app.registerHandler(
+            "/api/v1/app/channel/list",
+            wrap(&tcv::inside::api::v1::app::channel::list_::handle),
+            {Get}
+        );
 
         app.registerHandler(
             "/api/v1/license/create",
@@ -253,21 +275,20 @@ namespace tcv::api {
             wrap(&tcv::inside::api::v1::client::license::status::handle),
             {Get}
         );
-
         app.registerHandler(
-            "/api/v1/update/latest",
-            wrap(&tcv::inside::api::v1::update::latest::handle),
+            "/api/v1/client/app/notice",
+            wrap(&tcv::inside::api::v1::client::app::notice::handle),
             {Get}
         );
         app.registerHandler(
-            "/api/v1/update/channel/create",
-            wrap(&tcv::inside::api::v1::update::channel::create::handle),
-            {Post}
+            "/api/v1/client/app/version",
+            wrap(&tcv::inside::api::v1::client::app::version::handle),
+            {Get}
         );
         app.registerHandler(
-            "/api/v1/update/version/create",
-            wrap(&tcv::inside::api::v1::update::version::create::handle),
-            {Post}
+            "/api/v1/client/app/channels",
+            wrap(&tcv::inside::api::v1::client::app::channels::handle),
+            {Get}
         );
 
         tcv::logger().INFO("All /api/v1 routes registered");
