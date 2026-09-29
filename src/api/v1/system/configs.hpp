@@ -30,7 +30,7 @@ namespace tcv::inside::api::v1::system::configs {
         v["admin_security_level"] = tcv::repo::ConfigRepo::get("admin_security_level", "LAN");
         v["replay_window_seconds"] = tcv::repo::ConfigRepo::getI64("replay_window_seconds", 60);
         v["license_timer_paused"] = tcv::repo::GlobalTimer::isPaused();
-        v["server_time"] = std::time(nullptr);
+        v["server_time"] = static_cast<Json::Int64>(std::time(nullptr));
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
 }
