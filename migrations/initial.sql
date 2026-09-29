@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS apps
     -- App API Secret
     secret       TEXT    NOT NULL DEFAULT '',
 
+    -- AES Secret （if enable)
+    aes_key      TEXT    NOT NULL DEFAULT '',
+
     -- NONE / IP / DEVICE / IP_AND_DEVICE
     binding_mode TEXT    NOT NULL DEFAULT 'NONE',
 
@@ -87,7 +90,6 @@ CREATE TABLE IF NOT EXISTS licenses
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     app_id                INTEGER NOT NULL,
 
-    -- 卡密本体
     license               TEXT    NOT NULL,
     remark                TEXT,
 
@@ -112,10 +114,8 @@ CREATE TABLE IF NOT EXISTS licenses
     unbind_count          INTEGER NOT NULL DEFAULT 0,
     unbind_limit          INTEGER NOT NULL DEFAULT 0,
 
-    -- 每次解绑消耗秒数
     unbind_time_cost      INTEGER NOT NULL DEFAULT 0,
 
-    -- 每次解绑额外计数
     unbind_count_cost     INTEGER NOT NULL DEFAULT 0,
 
     max_devices           INTEGER NOT NULL DEFAULT 1,
@@ -126,9 +126,6 @@ CREATE TABLE IF NOT EXISTS licenses
     created_by_role       TEXT    NOT NULL DEFAULT 'OWNER',
 
     updated_at            INTEGER NOT NULL,
-
-    -- PLAIN / HASH / BASE64 / HEX
-    storage_mode          TEXT    NOT NULL DEFAULT 'PLAIN',
 
     -- 卡密类型
     license_type          TEXT    NOT NULL DEFAULT '',
