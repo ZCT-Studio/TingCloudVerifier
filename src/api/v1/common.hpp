@@ -242,6 +242,32 @@ namespace tcv::inside::api::v1::common {
                                 );
                                 return;
                             }
+
+                            // sign_enable=1 时强制 HMAC-SHA256 签名校验
+                            if (app->sign_enable == 1) {
+                                const auto sig_it = params.find("signature");
+                                if (sig_it == params.end() || sig_it->second.empty()) {
+                                    cb(drogon::HttpResponse::newHttpJsonResponse(
+                                        tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "缺少 signature")));
+                                    return;
+                                }
+                                const auto encode_it = params.find("encode");
+                                const std::string encode_val = (encode_it != params.end()) ? encode_it->second : std::string();
+                                const auto canonical = tcv::service::SecurityService::canonicalRequest(
+                                    method,
+                                    req_path,
+                                    appid_it->second,
+                                    it->second,
+                                    nonce_it->second,
+                                    encode_val
+                                );
+                                if (auto expected = tcv::service::SecurityService::computeSignature(canonical, app->secret);
+                                    expected != sig_it->second) {
+                                    cb(drogon::HttpResponse::newHttpJsonResponse(
+                                        tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "signature 校验失败")));
+                                    return;
+                                }
+                            }
                         }
                     }
                 }

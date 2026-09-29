@@ -51,6 +51,7 @@
 #include "api/v1/app/secret/regenerate.hpp"
 #include "api/v1/app/binding.hpp"
 #include "api/v1/app/set-decode.hpp"
+#include "api/v1/app/sign-enable.hpp"
 
 // --- license ---
 #include "api/v1/license/add-time.hpp"
@@ -177,6 +178,11 @@ namespace tcv::api {
         app.registerHandler(
             "/api/v1/app/set-decode",
             wrap(&tcv::inside::api::v1::app::set_decode::handle),
+            {Post}
+        );
+        app.registerHandler(
+            "/api/v1/app/sign-enable",
+            wrap(&tcv::inside::api::v1::app::sign_enable::handle),
             {Post}
         );
 

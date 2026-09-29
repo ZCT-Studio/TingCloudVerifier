@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,6 +168,7 @@ namespace tcv::middleware {
             drogon::MiddlewareCallback&& mcb
         ) override {
             const auto path = req->path();
+            fprintf(stderr, "[MW] AppSignatureMiddleware called for path=%s\n", path.c_str()); fflush(stderr);
             if (const bool need = path.rfind("/api/v1/client/", 0) == 0; !need) {
                 nextCb(nullptr);
                 return;
@@ -175,7 +176,8 @@ namespace tcv::middleware {
 
             auto& cfg = tcv::AppConfig::instance().security();
             auto& params = req->getParameters();
-
+            auto nonce_it = params.find("nonce");
+            auto appid_it = params.find("appid");
             const auto it = params.find("timestamp");
             if (it == params.end() || it->second.empty()) {
                 mcb(
@@ -197,8 +199,7 @@ namespace tcv::middleware {
                 return;
             }
 
-            const auto nonce_it = params.find("nonce");
-            if (const auto appid_it = params.find("appid"); nonce_it != params.end() && appid_it != params.end()) {
+            if (nonce_it != params.end() && appid_it != params.end()) {
                 if (const auto app = tcv::repo::AppRepo::findByAppid(appid_it->second)) {
                     const bool ok = tcv::repo::NonceRepo::tryUseNonce(
                         app->id,
@@ -213,6 +214,40 @@ namespace tcv::middleware {
                             )
                         );
                         return;
+                    }
+
+                    // ── 可选签名校验 (sign_enable=1 强制) ──
+                    if (app->sign_enable == 1) {
+                        fprintf(stderr, "[MW] sign_enable=1 hit, appid=%s\n", appid_it->second.c_str());
+                        const auto sig_it = params.find("signature");
+                        if (sig_it == params.end() || sig_it->second.empty()) {
+                            fprintf(stderr, "[MW] missing signature\n");
+                            mcb(
+                                drogon::HttpResponse::newHttpJsonResponse(
+                                    api::makeFail(api::ErrorCode::SIGNATURE_BAD, "缺少 signature")
+                                )
+                            );
+                            return;
+                        }
+                        const auto encode_it = params.find("encode");
+                        const auto encode_val = (encode_it != params.end()) ? encode_it->second : std::string();
+                        const auto canonical = tcv::service::SecurityService::canonicalRequest(
+                            req->methodString(),
+                            req->path(),
+                            appid_it->second,
+                            it->second,
+                            nonce_it->second,
+                            encode_val
+                        );
+                        if (auto expected = tcv::service::SecurityService::computeSignature(canonical, app->secret);
+                            expected != sig_it->second) {
+                            mcb(
+                                drogon::HttpResponse::newHttpJsonResponse(
+                                    api::makeFail(api::ErrorCode::SIGNATURE_BAD, "signature 校验失败")
+                                )
+                            );
+                            return;
+                        }
                     }
                 }
             }

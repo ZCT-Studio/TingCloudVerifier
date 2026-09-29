@@ -26,6 +26,7 @@
 #include "config/app_config.hpp"
 #include "database/database.hpp"
 #include "api/v1/register_all.hpp"
+#include "middleware/middlewares.hpp"
 
 #include "binary-c-array/config.yaml.hpp"
 
@@ -109,6 +110,7 @@ int main(const int argc, char** argv) {
         bootstrapDatabase();
 
         tcv::logger().INFO("Registering routes...");
+        tcv::middleware::registerAllMiddlewares(drogon::app());
         tcv::api::registerAllV1Routes(drogon::app());
 
         auto nthreads = std::thread::hardware_concurrency();
