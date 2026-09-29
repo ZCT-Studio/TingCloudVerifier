@@ -41,9 +41,12 @@ namespace tcv::inside::api::v1::app::create {
             cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeFail(r.code, r.message)));
             return;
         }
+        const auto app = tcv::repo::AppRepo::findByAppid(r.value->appid);
         Json::Value v;
         v["appid"] = r.value->appid;
         v["secret"] = r.value->secret;
+        v["notice"] = app ? app->notice : "";
+        v["binding_mode"] = app ? app->binding_mode : "NONE";
         cb(drogon::HttpResponse::newHttpJsonResponse(tcv::api::makeOk(v)));
     }
 }
