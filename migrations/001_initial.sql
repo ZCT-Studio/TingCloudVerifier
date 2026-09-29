@@ -77,6 +77,12 @@ CREATE TABLE IF NOT EXISTS apps
     -- NONE / IP / DEVICE / IP_AND_DEVICE
     binding_mode TEXT    NOT NULL DEFAULT 'NONE',
 
+    -- HMAC-SHA256 签名校验开关: 0=off, 1=on
+    sign_enable  INTEGER NOT NULL DEFAULT 0,
+
+    -- App 公告/通知
+    notice       TEXT    NOT NULL DEFAULT '',
+
     status       INTEGER NOT NULL DEFAULT 1,
     created_at   INTEGER NOT NULL,
     updated_at   INTEGER NOT NULL,
@@ -442,7 +448,7 @@ CREATE TABLE IF NOT EXISTS update_channels
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     app_id      INTEGER NOT NULL,
 
-    -- stable / beta / nightly
+    -- stable / rc / beta / alpha / canary
     channel     TEXT    NOT NULL,
 
     description TEXT,
