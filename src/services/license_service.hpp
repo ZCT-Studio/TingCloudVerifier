@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -253,9 +253,8 @@ namespace tcv::service {
                 return out;
             }
 
-            // APP binding mode 覆盖 license 自己的 binding_mode
-            // NONE: 不绑，DEVICE/IP/IP_AND_DEVICE: 按模式绑
-            std::string b_mode = (app_binding == "NONE") ? "NONE" : app_binding;
+            // License.binding_mode 已弃用，统一使用 App.binding_mode
+            std::string b_mode = app_binding;
 
             if (b_mode == "IP" || b_mode == "IP_AND_DEVICE") {
                 std::string ip_hash = tcv::crypto::sha256Hex(in.ip);
