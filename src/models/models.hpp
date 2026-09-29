@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,11 +67,18 @@ namespace tcv::models {
     struct App {
         int64_t id = 0;
         int64_t owner_id = 0;
-        std::string appid; // 纯数字随机字符串
+        std::string appid;
         std::string name;
         std::string description;
-        std::string secret; // 明文 secret
-        std::string binding_mode = "NONE"; // NONE / IP / DEVICE / IP_AND_DEVICE
+
+        std::string secret;         // API secret (HMAC-SHA256 signing key)
+        std::string dec_mode = "NONE"; // NONE / AES256-GCM / BASE64 / HEX
+        std::string dec_key;        // hex-encoded AES-256 key (64 chars)
+        int sign_enable = 0;        // 0 = no verify, 1 = require HMAC-SHA256 on client APIs
+
+        std::string binding_mode = "NONE"; // authoritative for license verify
+        std::string notice;         // app announcement text
+
         int status = 1;
         int64_t created_at = 0;
         int64_t updated_at = 0;

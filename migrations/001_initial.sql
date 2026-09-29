@@ -68,8 +68,11 @@ CREATE TABLE IF NOT EXISTS apps
     -- App API Secret
     secret       TEXT    NOT NULL DEFAULT '',
 
-    -- AES Secret （if enable)
-    aes_key      TEXT    NOT NULL DEFAULT '',
+    -- NONE / AES256-GCM / Base64 / Hex
+    dec_mode     TEXT    NOT NULL DEFAULT 'NONE',
+
+    -- Decode Secret （if supported)
+    dec_key      TEXT    NOT NULL DEFAULT '',
 
     -- NONE / IP / DEVICE / IP_AND_DEVICE
     binding_mode TEXT    NOT NULL DEFAULT 'NONE',
@@ -129,6 +132,9 @@ CREATE TABLE IF NOT EXISTS licenses
 
     -- 卡密类型
     license_type          TEXT    NOT NULL DEFAULT '',
+
+    -- PLAIN / ENCRYPTED (for future use)
+    storage_mode          TEXT    NOT NULL DEFAULT 'PLAIN',
 
     FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE
 );

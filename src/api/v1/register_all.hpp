@@ -1,4 +1,4 @@
-﻿// Copyright 2026 ZCT-Studio
+// Copyright 2026 ZCT-Studio
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@
 #include "api/v1/app/list.hpp"
 #include "api/v1/app/secret/regenerate.hpp"
 #include "api/v1/app/binding.hpp"
+#include "api/v1/app/set-decode.hpp"
 
 // --- license ---
 #include "api/v1/license/add-time.hpp"
@@ -171,6 +172,11 @@ namespace tcv::api {
         app.registerHandler(
             "/api/v1/app/binding",
             wrap(&tcv::inside::api::v1::app::binding::handle),
+            {Post}
+        );
+        app.registerHandler(
+            "/api/v1/app/set-decode",
+            wrap(&tcv::inside::api::v1::app::set_decode::handle),
             {Post}
         );
 
