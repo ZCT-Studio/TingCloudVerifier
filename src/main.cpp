@@ -125,7 +125,7 @@ int main(const int argc, char** argv) {
            .addListener(cfg.server().host, cfg.server().port)
            .setThreadNum(nthreads)
            .enableServerHeader(false)
-           .setDocumentRoot("./web")
+           .setDocumentRoot("./tcv_web")
            .run();
     } catch (const std::exception& e) {
         tcv::logger().FATAL("FATAL exception: {}", e.what());
