@@ -12,6 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(MSVC)
     add_compile_options(/utf-8)
     add_compile_definitions(NOMINMAX)
+    # Drogon/trantor/yaml-cpp from vcpkg are built with static CRT (MT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 set(TCV_INCLUDE_DIRS
