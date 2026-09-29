@@ -69,18 +69,34 @@ jobs:
       - name: CMake Configure
         run: |
           $crossFlags = @()
-          if ('${{ runner.os }}' -eq 'Linux' -and '${{ matrix.arch }}' -eq 'arm64') {
-            $crossFlags += '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc'
-            $crossFlags += '-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++'
+
+          # Windows: set generator platform for non-x64
+          if ('${{ runner.os }}' -eq 'Windows') {
+            if ('${{ matrix.arch }}' -eq 'x86') { $genPlat = '-A Win32' }
+            if ('${{ matrix.arch }}' -eq 'arm64') { $genPlat = '-A ARM64' }
           }
-          if ('${{ runner.os }}' -eq 'Linux' -and '${{ matrix.arch }}' -eq 'arm') {
-            $crossFlags += '-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc'
-            $crossFlags += '-DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++'
+
+          # Linux: cross-compiler / multilib flags
+          if ('${{ runner.os }}' -eq 'Linux') {
+            if ('${{ matrix.arch }}' -eq 'x86') {
+              $crossFlags += '-DCMAKE_CXX_FLAGS=-m32'
+              $crossFlags += '-DCMAKE_C_FLAGS=-m32'
+            }
+            if ('${{ matrix.arch }}' -eq 'arm64') {
+              $crossFlags += '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc'
+              $crossFlags += '-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++'
+            }
+            if ('${{ matrix.arch }}' -eq 'arm') {
+              $crossFlags += '-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc'
+              $crossFlags += '-DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++'
+            }
           }
+
           cmake -B build -S . `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} `
             -DCMAKE_BUILD_TYPE=Release `
+            $genPlat `
             @crossFlags
         shell: pwsh
 

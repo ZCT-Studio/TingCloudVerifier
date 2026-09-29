@@ -21,6 +21,12 @@ set(TCV_INCLUDE_DIRS
     "${CMAKE_SOURCE_DIR}/libs"
 )
 
+# Cross-compilation: Drogon's FindFilesystem uses try_run which can't
+# execute cross-compiled binaries. Pre-set to skip the check.
+if(CMAKE_CROSSCOMPILING)
+    set(CXX_FILESYSTEM_HAVE_FS TRUE)
+endif()
+
 find_package(Drogon                 CONFIG REQUIRED)
 find_package(unofficial-sqlite3     CONFIG REQUIRED)
 find_package(yaml-cpp               CONFIG REQUIRED)
@@ -40,6 +46,13 @@ target_link_libraries(TingCloudVerifier PRIVATE
 )
 
 target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_ARGON2=1)
+
+# GCC < 12 requires -lstdc++fs for std::filesystem (used by Drogon)
+if(CMAKE_CROSSCOMPILING AND NOT MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
+        target_link_libraries(TingCloudVerifier PRIVATE stdc++fs)
+    endif()
+endif()
 
 if(WIN32)
     set_target_properties(TingCloudVerifier PROPERTIES
