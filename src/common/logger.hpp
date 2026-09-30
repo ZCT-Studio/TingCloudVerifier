@@ -155,7 +155,7 @@ namespace tcv {
         ZCLibLog::LogLevelCfg level_cfg(lv, ZCLibLog::LogLevel::OFF);
 
         auto ex = ZCLibLog::executor::make<tcv::logging::tcv_executor>(file_path, false);
-        std::initializer_list executors{std::move(ex)};
+        std::initializer_list<ZCLibLog::executor> executors{std::move(ex)};
 
         if (async) {
             loggerStorage().emplace(std::in_place_index<1>, tcv::constants::PROJECT_NAME, executors, level_cfg);
@@ -171,7 +171,7 @@ namespace tcv {
             s.emplace(
                 std::in_place_index<0>,
                 tcv::constants::PROJECT_NAME,
-                std::initializer_list{
+                std::initializer_list<ZCLibLog::executor>{
                     ZCLibLog::executor::make<tcv::logging::tcv_executor>(std::string{}, true)
                 }
             );

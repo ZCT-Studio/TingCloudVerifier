@@ -22,9 +22,29 @@ set(TCV_INCLUDE_DIRS
 )
 
 # Cross-compilation: Drogon's FindFilesystem uses try_run which can't
-# execute cross-compiled binaries. Pre-set to skip the check.
+# execute cross-compiled binaries. Pre-set all three tests.
+# See: drogon FindFilesystem.cmake (vcpkg_installed/*/share/drogon/)
 if(CMAKE_CROSSCOMPILING)
-    set(CXX_FILESYSTEM_HAVE_FS TRUE)
+    if(MSVC)
+        set(CXX_FILESYSTEM_NO_LINK_NEEDED TRUE  CACHE INTERNAL "")
+        set(CXX_FILESYSTEM_STDCPPFS_NEEDED FALSE CACHE INTERNAL "")
+        set(CXX_FILESYSTEM_CPPFS_NEEDED      FALSE CACHE INTERNAL "")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9")
+            set(CXX_FILESYSTEM_NO_LINK_NEEDED FALSE CACHE INTERNAL "")
+            set(CXX_FILESYSTEM_STDCPPFS_NEEDED TRUE  CACHE INTERNAL "")
+            set(CXX_FILESYSTEM_CPPFS_NEEDED      FALSE CACHE INTERNAL "")
+        else()
+            set(CXX_FILESYSTEM_NO_LINK_NEEDED FALSE CACHE INTERNAL "")
+            set(CXX_FILESYSTEM_STDCPPFS_NEEDED FALSE CACHE INTERNAL "")
+            set(CXX_FILESYSTEM_CPPFS_NEEDED      TRUE  CACHE INTERNAL "")
+        endif()
+    else()
+        # Clang / other: assume cppfs link needed
+        set(CXX_FILESYSTEM_NO_LINK_NEEDED FALSE CACHE INTERNAL "")
+        set(CXX_FILESYSTEM_STDCPPFS_NEEDED FALSE CACHE INTERNAL "")
+        set(CXX_FILESYSTEM_CPPFS_NEEDED      TRUE  CACHE INTERNAL "")
+    endif()
 endif()
 
 find_package(Drogon                 CONFIG REQUIRED)

@@ -74,15 +74,15 @@ jobs:
           if ('${{ runner.os }}' -eq 'Windows') {
             if ('${{ matrix.arch }}' -eq 'x86') { $genPlat = '-A Win32' }
             if ('${{ matrix.arch }}' -eq 'arm64') { $genPlat = '-A ARM64' }
+            # Force CROSSCOMPILING flag for non-x64 so Drogon's FindFilesystem
+            # skips try_run (which can't execute ARM64 binaries on x64 runner)
+            if ('${{ matrix.arch }}' -ne 'x64') {
+              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
+            }
           }
 
           # Linux: cross-compiler / multilib flags
           if ('${{ runner.os }}' -eq 'Linux') {
-            # Drogon's FindFilesystem uses try_run which can't execute
-            # cross-compiled binaries; skip the check.
-            if ('${{ matrix.arch }}' -ne 'x64') {
-              $crossFlags += '-DCXX_FILESYSTEM_HAVE_FS=ON'
-            }
             if ('${{ matrix.arch }}' -eq 'x86') {
               $crossFlags += '-DCMAKE_CXX_FLAGS=-m32'
               $crossFlags += '-DCMAKE_C_FLAGS=-m32'
@@ -90,10 +90,12 @@ jobs:
             if ('${{ matrix.arch }}' -eq 'arm64') {
               $crossFlags += '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc'
               $crossFlags += '-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++'
+              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
             }
             if ('${{ matrix.arch }}' -eq 'arm') {
               $crossFlags += '-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc'
               $crossFlags += '-DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++'
+              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
             }
           }
 
