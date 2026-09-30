@@ -136,6 +136,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
@@ -169,6 +170,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
@@ -198,6 +200,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
@@ -231,6 +234,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
@@ -260,6 +264,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
@@ -289,6 +294,7 @@ jobs:
                   cp build/TingCloudVerifier dist/
                   cp -r config dist/config
                   cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
                   cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
                   cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
