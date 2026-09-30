@@ -38,7 +38,7 @@ jobs:
                   Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
-                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
                   Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
                   Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
@@ -72,7 +72,7 @@ jobs:
                   Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
-                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
                   Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
                   Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
@@ -106,7 +106,7 @@ jobs:
                   Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
-                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
                   Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
                   Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
