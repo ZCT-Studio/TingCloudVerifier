@@ -57,6 +57,33 @@ add_executable(TingCloudVerifier src/main.cpp)
 
 target_include_directories(TingCloudVerifier PRIVATE ${TCV_INCLUDE_DIRS})
 
+# Verify vcpkg import targets actually resolve to library files.
+# macOS dynamic triplets are known to produce broken IMPORTED_LOCATION for
+# unofficial-sqlite3 (empty / wrong path), which silently yields a link line
+# without the library and -> "symbol(s) not found" at link time.
+foreach(_tgt unofficial::sqlite3::sqlite3 unofficial::argon2::libargon2)
+    if(TARGET ${_tgt})
+        get_target_property(_loc ${_tgt} IMPORTED_LOCATION_RELEASE)
+        if(NOT _loc)
+            get_target_property(_loc ${_tgt} IMPORTED_LOCATION)
+            if(NOT _loc)
+                get_target_property(_loc ${_tgt} IMPORTED_IMPLIB_RELEASE)
+                if(NOT _loc)
+                    get_target_property(_loc ${_tgt} IMPORTED_IMPLIB)
+                endif()
+            endif()
+        endif()
+        if(NOT _loc OR NOT EXISTS "${_loc}")
+            message(FATAL_ERROR
+                "vcpkg import target ${_tgt} has no resolvable library file.\n"
+                "  IMPORTED_LOCATION_RELEASE='${_loc}'\n"
+                "This usually means you're using a broken vcpkg triplet.\n"
+                "Try switching to a static triplet (e.g. arm64-osx-static, x64-osx-static).")
+        endif()
+        message(STATUS "Resolved ${_tgt} -> ${_loc}")
+    endif()
+endforeach()
+
 target_link_libraries(TingCloudVerifier PRIVATE
     Drogon::Drogon
     unofficial::sqlite3::sqlite3

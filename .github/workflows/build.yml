@@ -23,8 +23,8 @@ jobs:
           - { os: ubuntu-24.04, arch: x86,  triplet: x86-linux,             target: "TingCloudVerifier",     extra_label: " (x86)" }
           - { os: ubuntu-latest, arch: arm64, triplet: arm64-linux,          target: "TingCloudVerifier",     extra_label: "" }
           - { os: ubuntu-24.04, arch: arm,   triplet: arm-linux,             target: "TingCloudVerifier",     extra_label: " (armv7)" }
-          - { os: macos-latest,   arch: arm64, triplet: arm64-osx,            target: "TingCloudVerifier",     extra_label: "" }
-          - { os: macos-14,       arch: x64,  triplet: x64-osx,              target: "TingCloudVerifier",     extra_label: "" }
+          - { os: macos-latest,   arch: arm64, triplet: arm64-osx-static,    target: "TingCloudVerifier",     extra_label: "" }
+          - { os: macos-14,       arch: x64,  triplet: x64-osx-static,      target: "TingCloudVerifier",     extra_label: "" }
 
     steps:
       - uses: actions/checkout@v4
