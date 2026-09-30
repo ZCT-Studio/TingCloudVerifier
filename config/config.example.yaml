@@ -43,7 +43,6 @@ rate_limit:
   login_fail_lock_seconds: 300
 
 logging:
-  # 日志等级：TRACE / DEBUG / INFO / WARN / ERROR / FATAL
   level: "INFO"
   async: true
   file_path: "./logs/tcv.log"

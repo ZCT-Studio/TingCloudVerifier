@@ -28,8 +28,6 @@
 #include "api/v1/register_all.hpp"
 #include "middleware/middlewares.hpp"
 
-#include "binary-c-array/config.yaml.hpp"
-
 namespace {
     void ensureDirectory(const std::filesystem::path& path) {
         try { std::filesystem::create_directories(path); } catch (...) {}
@@ -60,47 +58,27 @@ namespace {
             tcv::logger().ERROR("Migrations failed: {}", e.what());
         }
     }
-
-    void extractDefaultConfig(const std::filesystem::path& path) {
-        ensureDirectory(path.parent_path());
-
-        std::ofstream file(path, std::ios::binary);
-
-        if (!file) {
-            throw std::runtime_error("Failed to create config.yaml");
-        }
-
-        file.write(
-            reinterpret_cast<const char*>(config_yaml),
-            config_yaml_len
-        );
-
-        if (!file) {
-            throw std::runtime_error("Failed to write config.yaml");
-        }
-    }
 }
 
 int main(const int argc, char** argv) {
     try {
-        const std::string config_path = argc > 1 ? argv[1] : "config.yaml";
+        tcv::logger().INFO("Server \"{}\" is starting, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
+
+        const std::filesystem::path config_path = argc > 1 ? argv[1] : "config/config.yaml";
 
         tcv::logger().INFO("Config path: \"{}\"", std::filesystem::absolute(config_path).string());
 
         if (!std::filesystem::exists(config_path)) {
-            tcv::logger().WARN("Config file not found, extract default config");
-
-            extractDefaultConfig(config_path);
-
-            tcv::logger().WARN("Default configuration generated successfully. Please modify it and restart the application");
-
-            return 0;
+            tcv::logger().FATAL("Config file not found");
+            if (std::filesystem::exists(config_path / "config.example.yaml"))
+                tcv::logger().WARN("Please rename config.example.yaml in the config folder to config.yaml, configure it, and then restart");
+            else
+                tcv::logger().FATAL("It might have been corrupted during download, please download the package again");
+            return 1;
         }
 
-        tcv::logger().INFO("Server \"{}\" is running, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
-
         tcv::logger().INFO("Loading config...");
-        tcv::AppConfig::instance().load(config_path);
+        tcv::AppConfig::instance().load(config_path.string());
 
         const auto& cfg = tcv::AppConfig::instance();
         tcv::initLogger(cfg.logging().level, cfg.logging().file_path, cfg.logging().async);

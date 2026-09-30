@@ -1,172 +1,331 @@
 name: Build and Release
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
+    push:
+        branches: [main]
+        tags: ["v*"]
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  build:
-    name: ${{ matrix.os }} / ${{ matrix.arch }}${{ matrix.extra_label }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: windows-2022, arch: x64,  triplet: x64-windows-static,    target: "TingCloudVerifier.exe", extra_label: "" }
-          - { os: windows-2022, arch: x86,  triplet: x86-windows-static,    target: "TingCloudVerifier.exe", extra_label: "" }
-          - { os: windows-2022, arch: arm64, triplet: arm64-windows-static,  target: "TingCloudVerifier.exe", extra_label: "" }
-          - { os: ubuntu-latest, arch: x64,  triplet: x64-linux,             target: "TingCloudVerifier",     extra_label: "" }
-          - { os: ubuntu-24.04, arch: x86,  triplet: x86-linux,             target: "TingCloudVerifier",     extra_label: " (x86)" }
-          - { os: ubuntu-latest, arch: arm64, triplet: arm64-linux,          target: "TingCloudVerifier",     extra_label: "" }
-          - { os: ubuntu-24.04, arch: arm,   triplet: arm-linux,             target: "TingCloudVerifier",     extra_label: " (armv7)" }
-          - { os: macos-latest,   arch: arm64, triplet: arm64-osx,           target: "TingCloudVerifier",     extra_label: "" }
-          - { os: macos-15-intel,  arch: x64,  triplet: x64-osx,             target: "TingCloudVerifier",     extra_label: "" }
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install CMake
-        uses: lukka/get-cmake@latest
-
-      - name: Install cross-compilation dependencies (Linux)
-        if: runner.os == 'Linux' && matrix.arch != 'x64'
-        run: |
-          sudo apt-get update
-          case '${{ matrix.arch }}' in
-            x86)
-              sudo apt-get install -y g++-multilib gcc-multilib
-              ;;
-            arm64)
-              sudo apt-get install -y g++-aarch64-linux-gnu
-              ;;
-            arm)
-              sudo apt-get install -y g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
-              ;;
-          esac
-        shell: bash
-
-      - name: Bootstrap vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          if [ '${{ runner.os }}' = 'Windows' ]; then
-            ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
-          else
-            ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-          fi
-        shell: bash
-
-      - name: Install dependencies (manifest mode)
-        run: |
-          ./vcpkg/vcpkg install --triplet=${{ matrix.triplet }} --x-manifest-root="${{ github.workspace }}"
-        shell: bash
-
-      - name: CMake Configure
-        run: |
-          $crossFlags = @()
-
-          # Filesystem: Drogon FindFilesystem.cmake 会用 try_run 检测
-          # std::filesystem 的链接方式，交叉编译时二进制跑不了会 FATAL_ERROR。
-          # 我们预设 CXX_FILESYSTEM_NO_LINK_NEEDED=TRUE 绕过整个检测链：
-          #   MSVC / Clang(libc++) / GCC >=13 → 不需要额外链接
-          # GCC <9 才需要 -lstdc++fs（当前 CI 全是 GCC 13 / MSVC / Clang 所以不会踩）
-          # check_cxx_source_compiles/runs 不会覆盖已有 CACHE 值，所以 -D 传参能稳定生效。
-          $isCross = $false
-
-          # ── Windows ──
-          if ('${{ runner.os }}' -eq 'Windows') {
-            if ('${{ matrix.arch }}' -eq 'x86') { $genPlat = '-A Win32' }
-            if ('${{ matrix.arch }}' -eq 'arm64') {
-              $genPlat = '-A ARM64'
-              $isCross = $true
-              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
-            }
-          }
-
-          # ── Linux ──
-          if ('${{ runner.os }}' -eq 'Linux') {
-            if ('${{ matrix.arch }}' -eq 'x86') {
-              $crossFlags += '-DCMAKE_CXX_FLAGS=-m32'
-              $crossFlags += '-DCMAKE_C_FLAGS=-m32'
-            }
-            if ('${{ matrix.arch }}' -eq 'arm64') {
-              $isCross = $true
-              $crossFlags += '-DCMAKE_SYSTEM_NAME=Linux'
-              $crossFlags += '-DCMAKE_SYSTEM_PROCESSOR=aarch64'
-              $crossFlags += '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc'
-              $crossFlags += '-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++'
-              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
-            }
-            if ('${{ matrix.arch }}' -eq 'arm') {
-              $isCross = $true
-              $crossFlags += '-DCMAKE_SYSTEM_NAME=Linux'
-              $crossFlags += '-DCMAKE_SYSTEM_PROCESSOR=arm'
-              $crossFlags += '-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc'
-              $crossFlags += '-DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++'
-              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
-            }
-          }
-
-          # ── macOS ── (only static triplets now)
-          if ('${{ runner.os }}' -eq 'macOS') {
-            if ('${{ matrix.arch }}' -eq 'arm64') {
-              $crossFlags += '-DCMAKE_OSX_ARCHITECTURES=arm64'
-            }
-          }
-
-          Write-Host "isCross=$isCross arch=${{ matrix.arch }} flags=$($crossFlags -join ' ')"
-
-          cmake -B build -S . `
-            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} `
-            -DCMAKE_BUILD_TYPE=Release `
-            $genPlat `
-            @crossFlags
-        shell: pwsh
-
-      - name: Build
-        run: cmake --build build --config Release -j
-        shell: pwsh
-
-      - name: Package Artifact
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $target = "${{ matrix.target }}"
-          Copy-Item -Path "build/$target" -Destination "dist/" -Recurse -ErrorAction SilentlyContinue
-          Copy-Item -Path "build/$target" -Destination "dist/" -ErrorAction SilentlyContinue
-          Copy-Item -Path "config" -Destination "dist/config" -Recurse -ErrorAction SilentlyContinue
-          Copy-Item -Path "migrations" -Destination "dist/migrations" -Recurse -ErrorAction SilentlyContinue
-          Copy-Item -Path "README.md" -Destination "dist/" -ErrorAction SilentlyContinue
-          Copy-Item -Path "LICENSE" -Destination "dist/" -ErrorAction SilentlyContinue
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TingCloudVerifier-${{ matrix.os }}-${{ matrix.arch }}
-          path: dist
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: List Artifacts
-        run: ls -lah artifacts/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: TingCloudVerifier ${{ github.ref_name }}
-          files: artifacts/*
-          prerelease: ${{ contains(github.ref_name, '-') }}
+    windows-x64:
+        name: Windows x64
+        runs-on: windows-2022
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              shell: pwsh
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=x64-windows-static --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              shell: pwsh
+              run: cmake -B build -S . -A x64 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              shell: pwsh
+              run: cmake --build build --config Release -j
+            - name: Package
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force dist | Out-Null
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-windows-x64
+                  path: dist
+    
+    windows-x86:
+        name: Windows x86
+        runs-on: windows-2022
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              shell: pwsh
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=x86-windows-static --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              shell: pwsh
+              run: cmake -B build -S . -A Win32 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x86-windows-static -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              shell: pwsh
+              run: cmake --build build --config Release -j
+            - name: Package
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force dist | Out-Null
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-windows-x86
+                  path: dist
+    
+    windows-arm64:
+        name: Windows arm64
+        runs-on: windows-11-arm
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              shell: pwsh
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=arm64-windows-static --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              shell: pwsh
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-windows-static -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              shell: pwsh
+              run: cmake --build build --config Release -j
+            - name: Package
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force dist | Out-Null
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -Recurse -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-windows-arm64
+                  path: dist
+    
+    linux-x64:
+        name: Linux x64
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=x64-linux --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-linux -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-linux-x64
+                  path: dist
+    
+    linux-x86:
+        name: Linux x86
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: Install 32-bit toolchain
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-multilib g++-multilib
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=x86-linux --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x86-linux -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-linux-x86
+                  path: dist
+    
+    linux-arm64:
+        name: Linux arm64
+        runs-on: ubuntu-24.04-arm
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=arm64-linux --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-linux -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-linux-arm64
+                  path: dist
+    
+    linux-arm:
+        name: Linux armv7
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: Install cross-compiler
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=arm-linux --x-manifest-root="${{ github.workspace }}"
+            - name: Configure (cross + filesystem preset)
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm-linux -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ -DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-linux-arm
+                  path: dist
+    
+    macos-arm64:
+        name: macOS arm64
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=arm64-osx --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-osx -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-macos-arm64
+                  path: dist
+    
+    macos-x64:
+        name: macOS x64
+        runs-on: macos-15-intel
+        steps:
+            - uses: actions/checkout@v4
+              with: { submodules: recursive }
+            - uses: lukka/get-cmake@latest
+            - name: vcpkg install
+              run: |
+                  git clone https://github.com/microsoft/vcpkg.git
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+                  ./vcpkg/vcpkg install --triplet=x64-osx --x-manifest-root="${{ github.workspace }}"
+            - name: Configure
+              run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-osx -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build -j
+            - name: Package
+              run: |
+                  mkdir -p dist
+                  cp build/TingCloudVerifier dist/
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp -r README dist/README 2>/dev/null || true
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: TingCloudVerifier-macos-x64
+                  path: dist
+    
+    release:
+        if: startsWith(github.ref, 'refs/tags/v')
+        needs:
+            - windows-x64
+            - windows-x86
+            - windows-arm64
+            - linux-x64
+            - linux-x86
+            - linux-arm64
+            - linux-arm
+            - macos-arm64
+            - macos-x64
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+                  merge-multiple: true
+            - name: List Artifacts
+              run: ls -lah artifacts/
+            - name: Create Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ github.ref_name }}
+                  name: TingCloudVerifier ${{ github.ref_name }}
+                  files: artifacts/*
+                  prerelease: ${{ contains(github.ref_name, '-') }}

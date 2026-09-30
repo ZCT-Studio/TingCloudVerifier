@@ -23,7 +23,6 @@ Thumbs.db
 *.db-wal
 *.db-shm
 logs/
-config.yaml
 
 # Dependency cache
 vcpkg/
