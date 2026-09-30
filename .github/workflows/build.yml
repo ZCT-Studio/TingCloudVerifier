@@ -35,7 +35,7 @@ jobs:
               shell: pwsh
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
-                  Copy-Item build/TingCloudVerifier.exe dist/
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
                   Copy-Item README dist/README -ErrorAction SilentlyContinue
@@ -69,7 +69,7 @@ jobs:
               shell: pwsh
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
-                  Copy-Item build/TingCloudVerifier.exe dist/
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
                   Copy-Item README dist/README -ErrorAction SilentlyContinue
@@ -103,7 +103,7 @@ jobs:
               shell: pwsh
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
-                  Copy-Item build/TingCloudVerifier.exe dist/
+                  Copy-Item build/bin/Release/TingCloudVerifier.exe dist/
                   Copy-Item config dist/config -Recurse
                   Copy-Item migrations dist/migrations -Recurse
                   Copy-Item README dist/README -ErrorAction SilentlyContinue
