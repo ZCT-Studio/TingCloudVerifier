@@ -70,34 +70,56 @@ jobs:
         run: |
           $crossFlags = @()
 
-          # Windows: set generator platform for non-x64
+          # Filesystem: Drogon FindFilesystem.cmake 会用 try_run 检测
+          # std::filesystem 的链接方式，交叉编译时二进制跑不了会 FATAL_ERROR。
+          # 我们预设 CXX_FILESYSTEM_NO_LINK_NEEDED=TRUE 绕过整个检测链：
+          #   MSVC / Clang(libc++) / GCC >=13 → 不需要额外链接
+          # GCC <9 才需要 -lstdc++fs（当前 CI 全是 GCC 13 / MSVC / Clang 所以不会踩）
+          # check_cxx_source_compiles/runs 不会覆盖已有 CACHE 值，所以 -D 传参能稳定生效。
+          $isCross = $false
+
+          # ── Windows ──
           if ('${{ runner.os }}' -eq 'Windows') {
             if ('${{ matrix.arch }}' -eq 'x86') { $genPlat = '-A Win32' }
-            if ('${{ matrix.arch }}' -eq 'arm64') { $genPlat = '-A ARM64' }
-            # Force CROSSCOMPILING flag for non-x64 so Drogon's FindFilesystem
-            # skips try_run (which can't execute ARM64 binaries on x64 runner)
-            if ('${{ matrix.arch }}' -ne 'x64') {
-              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
+            if ('${{ matrix.arch }}' -eq 'arm64') {
+              $genPlat = '-A ARM64'
+              $isCross = $true
+              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
             }
           }
 
-          # Linux: cross-compiler / multilib flags
+          # ── Linux ──
           if ('${{ runner.os }}' -eq 'Linux') {
             if ('${{ matrix.arch }}' -eq 'x86') {
               $crossFlags += '-DCMAKE_CXX_FLAGS=-m32'
               $crossFlags += '-DCMAKE_C_FLAGS=-m32'
             }
             if ('${{ matrix.arch }}' -eq 'arm64') {
+              $isCross = $true
+              $crossFlags += '-DCMAKE_SYSTEM_NAME=Linux'
+              $crossFlags += '-DCMAKE_SYSTEM_PROCESSOR=aarch64'
               $crossFlags += '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc'
               $crossFlags += '-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++'
-              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
+              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
             }
             if ('${{ matrix.arch }}' -eq 'arm') {
+              $isCross = $true
+              $crossFlags += '-DCMAKE_SYSTEM_NAME=Linux'
+              $crossFlags += '-DCMAKE_SYSTEM_PROCESSOR=arm'
               $crossFlags += '-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc'
               $crossFlags += '-DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++'
-              $crossFlags += '-DCMAKE_CROSSCOMPILING=TRUE'
+              $crossFlags += '-DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE'
             }
           }
+
+          # ── macOS ── (only static triplets now)
+          if ('${{ runner.os }}' -eq 'macOS') {
+            if ('${{ matrix.arch }}' -eq 'arm64') {
+              $crossFlags += '-DCMAKE_OSX_ARCHITECTURES=arm64'
+            }
+          }
+
+          Write-Host "isCross=$isCross arch=${{ matrix.arch }} flags=$($crossFlags -join ' ')"
 
           cmake -B build -S . `
             -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
