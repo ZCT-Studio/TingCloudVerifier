@@ -36,9 +36,11 @@ jobs:
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
                   Copy-Item build/TingCloudVerifier.exe dist/
-                  if (Test-Path migrations) { Copy-Item migrations dist/migrations -Recurse }
-                  Copy-Item README.md dist/ -ErrorAction SilentlyContinue
-                  Copy-Item LICENSE dist/ -ErrorAction SilentlyContinue
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-windows-x64
@@ -68,9 +70,11 @@ jobs:
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
                   Copy-Item build/TingCloudVerifier.exe dist/
-                  if (Test-Path migrations) { Copy-Item migrations dist/migrations -Recurse }
-                  Copy-Item README.md dist/ -ErrorAction SilentlyContinue
-                  Copy-Item LICENSE dist/ -ErrorAction SilentlyContinue
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-windows-x86
@@ -100,9 +104,11 @@ jobs:
               run: |
                   New-Item -ItemType Directory -Force dist | Out-Null
                   Copy-Item build/TingCloudVerifier.exe dist/
-                  if (Test-Path migrations) { Copy-Item migrations dist/migrations -Recurse }
-                  Copy-Item README.md dist/ -ErrorAction SilentlyContinue
-                  Copy-Item LICENSE dist/ -ErrorAction SilentlyContinue
+                  Copy-Item config dist/config -Recurse
+                  Copy-Item migrations dist/migrations -Recurse
+                  Copy-Item README dist/README -ErrorAction SilentlyContinue
+                  Copy-Item README.md dist/README/README.zh-CN.md -ErrorAction SilentlyContinue
+                  Copy-Item LICENSE dist/LICENSE.TXT -ErrorAction SilentlyContinue
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-windows-arm64
@@ -128,9 +134,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
-                  cp README.md dist/ 2>/dev/null || true
-                  cp LICENSE dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-linux-x64
@@ -160,7 +167,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-linux-x86
@@ -186,7 +196,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-linux-arm64
@@ -216,7 +229,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-linux-arm
@@ -242,7 +258,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-macos-arm64
@@ -268,7 +287,10 @@ jobs:
               run: |
                   mkdir -p dist
                   cp build/TingCloudVerifier dist/
-                  cp -r migrations dist/ 2>/dev/null || true
+                  cp -r config dist/config
+                  cp -r migrations dist/migrations
+                  cp README.md dist/README/README.zh-CN.md 2>/dev/null || true
+                  cp LICENSE dist/LICENSE.TXT 2>/dev/null || true
             - uses: actions/upload-artifact@v4
               with:
                   name: TingCloudVerifier-macos-x64
