@@ -62,7 +62,7 @@ namespace {
 
 int main(const int argc, char** argv) {
     try {
-        tcv::logger().INFO("Server \"{}\" is starting, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
+        tcv::logger().INFO("TCV Server \"{}\" is starting, version {}", tcv::constants::PROJECT_NAME, tcv::constants::PROJECT_VERSION);
 
         const std::filesystem::path config_path = argc > 1 ? argv[1] : "config/config.yaml";
 
