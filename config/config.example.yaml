@@ -5,13 +5,13 @@ server:
   port: 10211
 
 database:
-  # 可选: sqlite | postgresql | mysql
+  # sqlite | postgresql | mysql
   type: "sqlite"
 
-  # ── SQLite (默认, 零依赖) ──
+  # ── SQLite
   sqlite_path: "./tcv.db"
 
-  # ── PostgreSQL (需要 vcpkg install tingcloudverifier[postgres]) ──
+  # ── PostgreSQL
   # type: "postgresql"
   # postgresql:
   #   host: "127.0.0.1"
@@ -21,7 +21,7 @@ database:
   #   password: ""
   #   sslmode: "prefer"       # disable / prefer / require / verify-ca / verify-full
 
-  # ── MySQL / MariaDB (需要 vcpkg install tingcloudverifier[mysql]) ──
+  # ── MySQL / MariaDB
   # type: "mysql"
   # mysql:
   #   host: "127.0.0.1"
