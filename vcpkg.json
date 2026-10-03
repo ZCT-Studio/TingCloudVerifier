@@ -1,6 +1,18 @@
 {
     "name": "tingcloudverifier",
     "version-string": "1.0.0",
+    "description": "Multi-platform software licensing server (SQLite default, PostgreSQL/MySQL optional)",
+    "features": {
+        "postgres": {
+            "description": "PostgreSQL backend support via libpq",
+            "dependencies": ["libpq"]
+        },
+        "mysql": {
+            "description": "MySQL / MariaDB backend support via libmysqlclient",
+            "dependencies": ["libmysqlclient"]
+        }
+    },
+    "default-features": [],
     "dependencies": [
         "drogon",
         "sqlite3",
@@ -9,3 +21,4 @@
         "argon2"
     ]
 }
+
