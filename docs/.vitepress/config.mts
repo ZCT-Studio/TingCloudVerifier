@@ -13,10 +13,22 @@ export default defineConfig({
     nav: [
       { text: 'API 概览', link: '/api/overview' },
       { text: '客户端安全', link: '/client/security' },
+      { text: '数据库', link: '/database/overview' },
       { text: 'GitHub', link: 'https://github.com/<owner>/TingCloudVerifier' }
     ],
 
     sidebar: {
+      '/database/': [
+        { text: '数据库概览', link: '/database/overview' },
+        { text: '启用可选后端', link: '/database/overview#启用可选后端' },
+        { text: '配置 (SQLite / PG / MySQL)', link: '/database/overview#config-yaml' },
+        { text: 'Migration 目录', link: '/database/overview#migration-目录结构' },
+        { text: '方言差异对照表', link: '/database/overview#方言差异' },
+        { text: '内部架构', link: '/database/overview#内部架构' },
+        { text: '业务主表', link: '/database/overview#业务主表三后端共用' },
+        { text: 'CI 回归', link: '/database/overview#ci-回归' },
+        { text: '加第四种后端', link: '/database/overview#给新项目加第四种后端' }
+      ],
       '/api/': [
         {
           text: '认证',
