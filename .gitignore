@@ -29,3 +29,7 @@ vcpkg/
 
 # Local tests
 localtests/
+
+# NodeJS
+
+node_modules/
