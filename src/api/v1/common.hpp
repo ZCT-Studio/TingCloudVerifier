@@ -23,6 +23,7 @@
 #include <exception>
 #include <functional>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <utility>
 #include <string>
@@ -300,7 +301,7 @@ inline std::string paramStr(
 
                     // ── 查 app（所有 client API 都需要 appid，提前拿到 dec_mode ──
                     auto appid_it = params.find("appid");
-                    std::shared_ptr<tcv::repo::models::App> app;
+                    std::optional<tcv::models::App> app;
                     if (appid_it != params.end() && !appid_it->second.empty()) {
                         app = tcv::repo::AppRepo::findByAppid(appid_it->second);
                     }
@@ -383,10 +384,11 @@ inline std::string paramStr(
                         }
                         // 把 handler 输出的 JSON body 加密后替换成 {"encode":"..."}
                         const auto body = resp->body();
-                        auto json = Json::Value::null;
+                        std::string body_str(body);
+                        auto json = Json::Value{};
                         Json::CharReaderBuilder rb;
                         auto errs = std::string{};
-                        std::istringstream iss(body);
+                        std::istringstream iss(body_str);
                         if (Json::parseFromStream(rb, iss, &json, &errs) && json.isObject()) {
                             Json::Value wrapped;
                             if (json.isMember("code"))      wrapped["code"] = json["code"];
