@@ -12,7 +12,7 @@
             "dependencies": ["libmysqlclient"]
         }
     },
-    "default-features": ["postgres", "mysql"],
+    "default-features": [],
     "dependencies": [
         "drogon",
         "sqlite3",
@@ -21,3 +21,4 @@
         "argon2"
     ]
 }
+

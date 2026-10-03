@@ -23,6 +23,7 @@
 #include <exception>
 #include <functional>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <utility>
 #include <string>
@@ -299,7 +300,7 @@ inline std::string paramStr(
                     }
 
                     auto appid_it = params.find("appid");
-                    std::shared_ptr<tcv::repo::models::App> app;
+                    std::optional<tcv::models::App> app;
                     if (appid_it != params.end() && !appid_it->second.empty()) {
                         app = tcv::repo::AppRepo::findByAppid(appid_it->second);
                     }
@@ -378,10 +379,11 @@ inline std::string paramStr(
                         }
 
                         const auto body = resp->body();
-                        auto json = Json::Value::null;
+                        auto json = Json::Value{};
                         Json::CharReaderBuilder rb;
                         auto errs = std::string{};
-                        std::istringstream iss(body);
+                        std::string body_str(body);
+                        std::istringstream iss(body_str);
                         if (Json::parseFromStream(rb, iss, &json, &errs) && json.isObject()) {
                             Json::Value wrapped;
                             if (json.isMember("code"))      wrapped["code"] = json["code"];
@@ -423,4 +425,8 @@ inline std::string paramStr(
 }
 
 #endif // TCV_API_V1_COMMON
+
+
+
+
 

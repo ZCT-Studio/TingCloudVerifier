@@ -24,7 +24,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=x64-windows-static --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=x64-windows-static --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               shell: pwsh
               run: cmake -B build -S . -A x64 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_BUILD_TYPE=Release
@@ -58,7 +58,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=x86-windows-static --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=x86-windows-static --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               shell: pwsh
               run: cmake -B build -S . -A Win32 -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x86-windows-static -DCMAKE_BUILD_TYPE=Release
@@ -92,7 +92,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=arm64-windows-static --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=arm64-windows-static --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               shell: pwsh
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-windows-static -DCMAKE_BUILD_TYPE=Release
@@ -125,7 +125,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=x64-linux --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=x64-linux --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-linux -DCMAKE_BUILD_TYPE=Release
             - name: Build
@@ -159,7 +159,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=x86-linux --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=x86-linux --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x86-linux -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
             - name: Build
@@ -189,7 +189,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=arm64-linux --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=arm64-linux --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-linux -DCMAKE_BUILD_TYPE=Release
             - name: Build
@@ -223,7 +223,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=arm-linux --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=arm-linux --x-manifest-root="${{ github.workspace }}"
             - name: Configure (cross + filesystem preset)
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm-linux -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ -DCXX_FILESYSTEM_NO_LINK_NEEDED=TRUE
             - name: Build
@@ -253,7 +253,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=arm64-osx --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=arm64-osx --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-osx -DCMAKE_BUILD_TYPE=Release
             - name: Build
@@ -283,7 +283,7 @@ jobs:
               run: |
                   git clone https://github.com/microsoft/vcpkg.git
                   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-                  ./vcpkg/vcpkg install --triplet=x64-osx --x-manifest-root="${{ github.workspace }}"
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres,mysql] --triplet=x64-osx --x-manifest-root="${{ github.workspace }}"
             - name: Configure
               run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-osx -DCMAKE_BUILD_TYPE=Release
             - name: Build
@@ -464,4 +464,5 @@ jobs:
                   name: TingCloudVerifier ${{ github.ref_name }}
                   files: artifacts/*
                   prerelease: ${{ contains(github.ref_name, '-') }}
+
 
