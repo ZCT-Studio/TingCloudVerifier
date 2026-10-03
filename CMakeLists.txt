@@ -84,6 +84,27 @@ foreach(_tgt unofficial::sqlite3::sqlite3 unofficial::argon2::libargon2)
     endif()
 endforeach()
 
+# ── 可选后端 ──
+# PostgreSQL: 运行时支持, 需要 vcpkg install libpq
+find_package(PostgreSQL QUIET)
+if(PostgreSQL_FOUND)
+    message(STATUS "PostgreSQL (libpq) FOUND — enabling TCV_HAS_PGSQL")
+    set(TCV_HAS_PGSQL ON)
+else()
+    message(STATUS "PostgreSQL (libpq) NOT found — TCV will run WITHOUT PostgreSQL support")
+    set(TCV_HAS_PGSQL OFF)
+endif()
+
+# MySQL/MariaDB: 运行时支持, 需要 vcpkg install libmysqlclient
+find_package(unofficial-libmysqlclient CONFIG QUIET)
+if(TARGET unofficial::libmysqlclient::libmysqlclient)
+    message(STATUS "MySQL (libmysqlclient) FOUND — enabling TCV_HAS_MYSQL")
+    set(TCV_HAS_MYSQL ON)
+else()
+    message(STATUS "MySQL (libmysqlclient) NOT found — TCV will run WITHOUT MySQL support")
+    set(TCV_HAS_MYSQL OFF)
+endif()
+
 target_link_libraries(TingCloudVerifier PRIVATE
     Drogon::Drogon
     unofficial::sqlite3::sqlite3
@@ -91,6 +112,16 @@ target_link_libraries(TingCloudVerifier PRIVATE
     OpenSSL::SSL OpenSSL::Crypto
     unofficial::argon2::libargon2
 )
+
+if(TCV_HAS_PGSQL)
+    target_link_libraries(TingCloudVerifier PRIVATE PostgreSQL::PostgreSQL)
+    target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_PGSQL=1)
+endif()
+
+if(TCV_HAS_MYSQL)
+    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libmysqlclient::libmysqlclient)
+    target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_MYSQL=1)
+endif()
 
 target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_ARGON2=1)
 

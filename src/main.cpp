@@ -35,17 +35,8 @@ namespace {
 
     void bootstrapDatabase() {
         const auto& cfg = tcv::AppConfig::instance();
-        if (cfg.database().type != "sqlite") {
-            tcv::logger().FATAL("Non-SQLite backend not implemented yet");
-            std::exit(1);
-        }
-        const auto p = std::filesystem::path(cfg.database().sqlite_path);
-        if (p.has_parent_path()) ensureDirectory(p.parent_path());
-
         auto& db = tcv::db::Database::instance();
-        db.open(cfg.database().sqlite_path);
-
-        tcv::logger().INFO("Database opened: \"{}\"", std::filesystem::absolute(cfg.database().sqlite_path).string());
+        db.open(cfg.database()); // 门面类内部按 type 选择后端
 
         std::string migrations = "migrations";
         if (!std::filesystem::exists(migrations)) {

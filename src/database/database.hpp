@@ -12,40 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//
-// Created by wanjiangzhi on 2026/9/25.
-//
-
 #ifndef TCV_DATABASE_DATABASE
 #define TCV_DATABASE_DATABASE
 
-#include <exception>
-#include <filesystem>
-#include <utility>
-#include <fstream>
-#include <optional>
 #include <cstddef>
-#include <sstream>
-#include <stdexcept>
-#include <shared_mutex>
-#include <algorithm>
-#include <string>
 #include <ctime>
-#include <mutex>
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <string>
 #include <vector>
-#include <sqlite3.h>
+
+#include "database/idatabase.hpp"
+#include "config/app_config.hpp"
 #include "common/logger.hpp"
 
+// 三个具体后端实现
+#include "database/sqlite_database.hpp"
+#ifdef TCV_HAS_PGSQL
+#include "database/pgsql_database.hpp"
+#endif
+#ifdef TCV_HAS_MYSQL
+#include "database/mysql_database.hpp"
+#endif
 
 namespace tcv::db {
-    class SQLException : public std::runtime_error {
-    public:
-        using std::runtime_error::runtime_error;
-    };
 
-    using Row = std::vector<std::pair<std::string, std::string>>;
-    using ResultSet = std::vector<Row>;
-
+    // ── 门面类：持有一个 IDatabase 实例，repo/service 层零改动 ──
     class Database {
     public:
         static Database& instance() {
@@ -53,232 +47,171 @@ namespace tcv::db {
             return inst;
         }
 
-        void open(const std::string& path) {
+        // 根据 config 创建后端
+        void open(const tcv::DatabaseConfig& cfg) {
             std::unique_lock lock(mtx_);
-            if (db_) sqlite3_close(db_);
-            constexpr int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
-                                  SQLITE_OPEN_FULLMUTEX;
-            if (sqlite3_open_v2(path.c_str(), &db_, flags, nullptr) != SQLITE_OK) {
-                auto msg = db_ ? sqlite3_errmsg(db_) : "unknown";
-                if (db_) sqlite3_close(db_);
-                db_ = nullptr;
-                throw SQLException(std::format("sqlite open [{}] failed: {}", path, msg));
+            if (impl_) { impl_->close(); impl_.reset(); }
+
+            auto type = cfg.type;
+            if (type == "sqlite") {
+                auto p = std::filesystem::path(cfg.sqlite_path);
+                if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path());
+                auto s = std::make_unique<SqliteDatabase>();
+                s->open(cfg.sqlite_path);
+                impl_ = std::move(s);
+                tcv::logger().INFO("Database opened: SQLite {}", std::filesystem::absolute(cfg.sqlite_path).string());
+            } else if (type == "postgresql") {
+#ifdef TCV_HAS_PGSQL
+                auto& pg = cfg.pgsql;
+                std::string conninfo = std::format(
+                    "host={} port={} dbname={} user={} password={} sslmode={} application_name=TCV",
+                    pg.host, pg.port, pg.dbname, pg.user,
+                    pg.password.empty() ? "" : ("password=" + pg.password),
+                    pg.sslmode
+                );
+                auto s = std::make_unique<PgsqlDatabase>();
+                s->open(conninfo);
+                impl_ = std::move(s);
+                tcv::logger().INFO("Database opened: PostgreSQL {}@{}:{}/{}", pg.user, pg.host, pg.port, pg.dbname);
+#else
+                throw SQLException("TCV was compiled without PostgreSQL support (TCV_HAS_PGSQL not defined)");
+#endif
+            } else if (type == "mysql") {
+#ifdef TCV_HAS_MYSQL
+                auto& my = cfg.mysql;
+                std::string conninfo = std::format(
+                    "{}:{}:{}:{}:{}:{}",
+                    my.host, my.port, my.user, my.password, my.dbname, my.connect_timeout_sec
+                );
+                auto s = std::make_unique<MysqlDatabase>();
+                s->open(conninfo);
+                impl_ = std::move(s);
+                tcv::logger().INFO("Database opened: MySQL {}@{}:{}/{}", my.user, my.host, my.port, my.dbname);
+#else
+                throw SQLException("TCV was compiled without MySQL support (TCV_HAS_MYSQL not defined)");
+#endif
+            } else {
+                throw SQLException(std::format("Unsupported database.type: {}", type));
             }
-            // execLocked 避死
-            execLocked("PRAGMA journal_mode=DELETE;");
-            execLocked("PRAGMA foreign_keys=ON;");
-            execLocked("PRAGMA synchronous=NORMAL;");
         }
 
-        sqlite3* handle() const { return db_; }
+        void close() {
+            std::unique_lock lock(mtx_);
+            if (impl_) { impl_->close(); impl_.reset(); }
+        }
 
-        int64_t lastInsertId() const { return sqlite3_last_insert_rowid(db_); }
-        int rowsChanged() const { return sqlite3_changes(db_); }
+        const char* backendName() const {
+            return impl_ ? impl_->backendName() : "none";
+        }
+
+        int64_t lastInsertId() const { return impl_ ? impl_->lastInsertId() : 0; }
+        int rowsChanged() const { return impl_ ? impl_->rowsChanged() : 0; }
 
         void exec(const std::string& sql) const {
-            std::unique_lock lock(mtx_);
-            char* err = nullptr;
-            if (const int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err); rc != SQLITE_OK) {
-                std::string msg = err ? err : "unknown";
-                sqlite3_free(err);
-                throw SQLException(std::format("sqlite exec: {}", msg));
-            }
+            if (!impl_) throw SQLException("database not open");
+            impl_->exec(sql);
         }
 
         template <typename... Args>
         void execParams(const std::string& sql, Args&&... args) {
-            std::unique_lock lock(mtx_);
-            sqlite3_stmt* stmt = compileLocked(sql);
-            bindAll(stmt, std::forward<Args>(args)...);
-            stepFinalize(stmt);
+            if (!impl_) throw SQLException("database not open");
+            std::vector<std::string> params;
+            detail::packVec(params, std::forward<Args>(args)...);
+            impl_->execParams(impl_->adaptParams(sql), params);
         }
 
         ResultSet query(const std::string& sql) const {
-            std::unique_lock lock(mtx_);
-            sqlite3_stmt* stmt = compileLocked(sql);
-            return fetchAll(stmt);
+            if (!impl_) throw SQLException("database not open");
+            return impl_->query(sql);
         }
 
         template <typename... Args>
         ResultSet queryParams(const std::string& sql, Args&&... args) {
-            std::unique_lock lock(mtx_);
-            sqlite3_stmt* stmt = compileLocked(sql);
-            bindAll(stmt, std::forward<Args>(args)...);
-            return fetchAll(stmt);
+            if (!impl_) throw SQLException("database not open");
+            std::vector<std::string> params;
+            detail::packVec(params, std::forward<Args>(args)...);
+            return impl_->queryParams(impl_->adaptParams(sql), params);
         }
 
         template <typename... Args>
         std::optional<std::string> queryScalar(const std::string& sql, Args&&... args) {
-            std::unique_lock lock(mtx_);
-            sqlite3_stmt* stmt = compileLocked(sql);
-            bindAll(stmt, std::forward<Args>(args)...);
-            if (const int rc = sqlite3_step(stmt); rc == SQLITE_ROW && sqlite3_column_count(stmt) > 0) {
-                const auto ptr = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-                std::string val = ptr ? ptr : "";
-                sqlite3_finalize(stmt);
-                return val;
-            }
-            sqlite3_finalize(stmt);
-            return std::nullopt;
+            if (!impl_) throw SQLException("database not open");
+            std::vector<std::string> params;
+            detail::packVec(params, std::forward<Args>(args)...);
+            return impl_->queryScalar(impl_->adaptParams(sql), params);
         }
 
         template <typename F>
         bool transaction(F&& fn) {
-            std::unique_lock lock(mtx_);
-            execLocked("BEGIN IMMEDIATE");
-            bool committed = false;
-            try {
-                if (fn()) {
-                    execLocked("COMMIT");
-                    committed = true;
-                } else {
-                    execLocked("ROLLBACK");
-                }
-            } catch (...) {
-                execLocked("ROLLBACK");
-                throw;
-            }
-            return committed;
+            if (!impl_) throw SQLException("database not open");
+            return impl_->transaction(std::forward<F>(fn));
         }
 
-        void execSqlFile(const std::string& path) const {
-            std::ifstream f(path);
-            if (!f.is_open()) throw SQLException(std::format("cannot open sql file: {}", path));
-            std::ostringstream ss;
-            ss << f.rdbuf();
-            exec(ss.str());
+        void execSqlFile(const std::string& path) {
+            if (!impl_) throw SQLException("database not open");
+            impl_->execSqlFile(path);
         }
 
         Database(const Database&) = delete;
         Database& operator=(const Database&) = delete;
+
     private:
         Database() = default;
-        ~Database() { if (db_) sqlite3_close(db_); }
+        ~Database() { close(); }
 
-        sqlite3* db_ = nullptr;
+        std::unique_ptr<IDatabase> impl_;
         mutable std::recursive_mutex mtx_;
-
-        sqlite3_stmt* compileLocked(const std::string& sql) const {
-            sqlite3_stmt* stmt = nullptr;
-            if (const int rc = sqlite3_prepare_v2(db_, sql.c_str(), static_cast<int>(sql.size()), &stmt, nullptr); rc != SQLITE_OK) {
-                throw SQLException(std::format("sqlite prepare: {} | sql: {}", sqlite3_errmsg(db_), sql));
-            }
-            return stmt;
-        }
-
-        void stepFinalize(sqlite3_stmt* stmt) const {
-            const int rc = sqlite3_step(stmt);
-            sqlite3_finalize(stmt);
-            if (rc != SQLITE_DONE) {
-                throw SQLException(std::format("sqlite step: {}", sqlite3_errmsg(db_)));
-            }
-        }
-
-        void execLocked(const std::string& sql) const {
-            char* err = nullptr;
-            if (const int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err); rc != SQLITE_OK) {
-                std::string msg = err ? err : "unknown";
-                sqlite3_free(err);
-                throw SQLException(std::format("sqlite exec: {}", msg));
-            }
-        }
-
-        ResultSet fetchAll(sqlite3_stmt* stmt) const {
-            ResultSet out;
-            const int cols = sqlite3_column_count(stmt);
-            std::vector<std::string> col_names(static_cast<size_t>(cols));
-            for (int i = 0; i < cols; ++i)
-                col_names[i] = sqlite3_column_name(stmt, i);
-
-            int rc;
-            while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-                Row row;
-                row.reserve(cols);
-                for (int i = 0; i < cols; ++i) {
-                    auto v = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
-                    row.emplace_back(col_names[i], v ? v : "");
-                }
-                out.push_back(std::move(row));
-            }
-            sqlite3_finalize(stmt);
-            if (rc != SQLITE_DONE) {
-                throw SQLException(std::format("sqlite fetch: {}", sqlite3_errmsg(db_)));
-            }
-            return out;
-        }
-
-        template <typename T, typename... Rest>
-        void bindAll(sqlite3_stmt* stmt, T&& v, Rest&&... rest) {
-            bindOne(stmt, sqlite3_bind_parameter_count(stmt) - static_cast<int>(sizeof...(rest)), std::forward<T>(v));
-            bindAll(stmt, std::forward<Rest>(rest)...);
-        }
-
-        static void bindAll(sqlite3_stmt* /*stmt*/) {}
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const std::string_view v) {
-            const auto sv = std::string(v);
-            sqlite3_bind_text(stmt, idx, sv.data(), static_cast<int>(sv.size()), SQLITE_TRANSIENT);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const std::string& v) {
-            sqlite3_bind_text(stmt, idx, v.data(), static_cast<int>(v.size()), SQLITE_TRANSIENT);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const char* v) {
-            sqlite3_bind_text(stmt, idx, v, -1, SQLITE_TRANSIENT);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const int64_t v) {
-            sqlite3_bind_int64(stmt, idx, v);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const int v) {
-            sqlite3_bind_int(stmt, idx, v);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, std::nullptr_t) {
-            sqlite3_bind_null(stmt, idx);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const std::optional<std::string>& v) {
-            if (v) bindOne(stmt, idx, *v);
-            else sqlite3_bind_null(stmt, idx);
-        }
-
-        static void bindOne(sqlite3_stmt* stmt, const int idx, const std::optional<int64_t>& v) {
-            if (v) bindOne(stmt, idx, *v);
-            else sqlite3_bind_null(stmt, idx);
-        }
     };
 
+    // ── MigrationRunner ──
     class MigrationRunner {
     public:
+        // 根据当前 Database 类型决定跑哪个目录下的 SQL
+        // 目录规则: {migrations}/{backend}/  (sqlite / postgresql / mysql)
         static void runAll(const std::string& migrationsDir) {
             auto& db = Database::instance();
-            try {
-                db.exec(
-                    "CREATE TABLE IF NOT EXISTS schema_migrations ("
-                    "version INTEGER PRIMARY KEY, "
-                    "name TEXT NOT NULL, "
-                    "applied_at INTEGER NOT NULL)"
-                );
-            } catch (...) {}
+            const char* backend = db.backendName();
+
+            std::string backend_dir = backendDirName(backend);
+            std::string target_dir = (std::filesystem::path(migrationsDir) / backend_dir).string();
+
+            // 兼容旧目录: 如果 migrationsDir 本身就是 sqlite 风格的（001_initial.sql），
+            // 且不存在 migrations/sqlite/ 目录，直接用 migrationsDir
+            std::filesystem::path p(migrationsDir);
+            bool use_plain = false;
+            if (!std::filesystem::exists(target_dir)) {
+                // 检查是否有 001_initial.sql 等直接文件
+                if (std::filesystem::exists(p / "001_initial.sql")) {
+                    tcv::logger().WARN(
+                        "No backend-specific migrations/{}/ dir found, "
+                        "falling back to plain {} (all SQLs must be cross-DB compatible).",
+                        backend_dir, migrationsDir);
+                    target_dir = migrationsDir;
+                    use_plain = true;
+                } else {
+                    throw SQLException(std::format(
+                        "Migration dir not found: {}. Expected migrations/{}/001_initial.sql",
+                        target_dir, backend_dir));
+                }
+            }
+
+            // 建 schema_migrations 表（不同后端不同方言）
+            db.exec(schemaMigrationsCreate(backend));
 
             std::vector<std::filesystem::path> files;
-            if (std::filesystem::exists(migrationsDir)) {
-                for (auto& f : std::filesystem::directory_iterator(migrationsDir)) {
+            if (std::filesystem::exists(target_dir)) {
+                for (auto& f : std::filesystem::directory_iterator(target_dir)) {
                     if (f.path().extension() == ".sql") files.push_back(f.path());
                 }
                 std::ranges::sort(files);
             }
 
-            for (auto& p : files) {
-                std::string f_name = p.filename().string();
+            for (auto& fp : files) {
+                std::string f_name = fp.filename().string();
                 int version = 0;
                 if (auto pos = f_name.find('_'); pos != std::string::npos) {
                     try { version = std::stoi(f_name.substr(0, pos)); } catch (...) {}
                 }
-
                 auto applied = db.queryScalar(
                     "SELECT version FROM schema_migrations WHERE version = ?",
                     version
@@ -286,20 +219,52 @@ namespace tcv::db {
                 if (applied.has_value()) continue;
 
                 try {
-                    db.execSqlFile(p.string());
+                    db.execSqlFile(fp.string());
                     int64_t now = std::time(nullptr);
                     db.execParams(
                         "INSERT INTO schema_migrations(version, name, applied_at) VALUES (?, ?, ?)",
-                        version,
-                        f_name,
-                        now
+                        version, f_name, now
                     );
-                    tcv::logger().INFO("Migration applied: {}", f_name);
+                    tcv::logger().INFO("[{}] Migration applied: {}", backend, f_name);
                 } catch (const std::exception& e) {
-                    tcv::logger().ERROR("Migration FAILED {}: {}", f_name, e.what());
+                    tcv::logger().ERROR("[{}] Migration FAILED {}: {}", backend, f_name, e.what());
                     throw;
                 }
             }
+
+            if (use_plain) {
+                tcv::logger().WARN(
+                    "Consider splitting migrations into migrations/{}/ for full backend-specific control.",
+                    backend_dir);
+            }
+        }
+
+    private:
+        static std::string backendDirName(const char* backend) {
+            if (std::string_view(backend) == "postgresql") return "pgsql";
+            if (std::string_view(backend) == "mysql")      return "mysql";
+            return "sqlite";
+        }
+
+        static std::string schemaMigrationsCreate(const char* backend) {
+            // 三种后端各自的建表方言
+            if (std::string_view(backend) == "postgresql") {
+                return "CREATE TABLE IF NOT EXISTS schema_migrations ("
+                       "version BIGSERIAL PRIMARY KEY, "
+                       "name TEXT NOT NULL UNIQUE, "
+                       "applied_at BIGINT NOT NULL)";
+            } else if (std::string_view(backend) == "mysql") {
+                return "CREATE TABLE IF NOT EXISTS schema_migrations ("
+                       "version BIGINT PRIMARY KEY AUTO_INCREMENT, "
+                       "name VARCHAR(255) NOT NULL UNIQUE, "
+                       "applied_at BIGINT NOT NULL) "
+                       "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+            }
+            // sqlite 默认
+            return "CREATE TABLE IF NOT EXISTS schema_migrations ("
+                   "version INTEGER PRIMARY KEY, "
+                   "name TEXT NOT NULL UNIQUE, "
+                   "applied_at INTEGER NOT NULL)";
         }
     };
 }
