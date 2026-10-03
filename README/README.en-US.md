@@ -221,7 +221,77 @@ Requires the four security fields above. **No Bearer token**.
 
 ## Database
 
-Migrations live in `migrations/`, applied on first start. Main tables:
+Three backends supported — switch at runtime via `config.yaml database.type`. **Repo/service layers unchanged**:
+
+| Backend | When to use | vcpkg feature | Quick start |
+|---|---|---|---|
+| **SQLite** (default) | Zero dep, single file, dev / small deploy | default (always on) | Nothing extra needed |
+| **PostgreSQL** | Production grade, good concurrency, recommended for multi-node | `postgres` | `docker run -p 5432:5432 postgres:16` |
+| **MySQL / MariaDB** | Ecosystem familiarity | `mysql` | `docker run -p 3306:3306 mysql:8.4` |
+
+### Enabling optional backends
+
+```bash
+# PostgreSQL
+vcpkg install tingcloudverifier[postgres]
+
+# MySQL / MariaDB
+vcpkg install tingcloudverifier[mysql]
+
+# Both (both linked — pick at runtime)
+vcpkg install tingcloudverifier[postgres,mysql]
+```
+
+Then in `config/config.yaml`:
+
+```yaml
+# PostgreSQL
+database:
+  type: "postgresql"
+  postgresql:
+    host: "127.0.0.1"
+    port: 5432
+    dbname: "tcv"
+    user: "tcv"
+    password: "xxx"
+    sslmode: "prefer"
+
+# MySQL
+database:
+  type: "mysql"
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    dbname: "tcv"
+    user: "tcv"
+    password: "xxx"
+    connect_timeout_sec: 10
+```
+
+### Migration layout
+
+```
+migrations/
+├── sqlite/      ← SQLite dialect (INTEGER PRIMARY KEY AUTOINCREMENT, strftime, INSERT OR IGNORE)
+├── pgsql/       ← PostgreSQL dialect (BIGSERIAL, EXTRACT(EPOCH FROM NOW()), ON CONFLICT DO NOTHING)
+├── mysql/       ← MySQL dialect (BIGINT AUTO_INCREMENT, UNIX_TIMESTAMP(), INSERT IGNORE)
+└── 001_initial.sql  ← legacy fallback if no backend-specific dir exists
+```
+
+`MigrationRunner` picks the right sub-dir automatically. Falls back to the root dir (with a WARN log) otherwise.
+
+### Architecture
+
+```cpp
+IDatabase (pure virtual interface)
+├── SqliteDatabase     — sqlite3 C API
+├── PgsqlDatabase      — libpq C API + adaptParams(? → $1 $2 ...)
+└── MysqlDatabase      — libmysqlclient prepared statements
+
+Database::instance()    — façade class, repo/service layers unchanged
+```
+
+### Main tables (shared across backends)
 
 ```
 apps           — globally unique appid, dec_mode/dec_key/sign_enable/notice
@@ -231,6 +301,7 @@ update_channels — stable/rc/canary/alpha auto-seeded per app
 nonces         — anti-replay uniqueness (appid + nonce)
 ip_whitelist   — LOCAL security level
 audit_logs     — audit trail
+schema_migrations — version tracking (auto-created by MigrationRunner)
 ```
 
 ## Build Artifacts

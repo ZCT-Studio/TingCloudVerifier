@@ -26,8 +26,32 @@
 
 namespace tcv {
     struct DatabaseConfig {
+        // sqlite | postgresql | mysql
         std::string type = "sqlite";
+
+        // ── SQLite ──
         std::string sqlite_path = "./tcv.db";
+
+        // ── PostgreSQL ──
+        struct Pgsql {
+            std::string host = "127.0.0.1";
+            int port = 5432;
+            std::string dbname = "tcv";
+            std::string user = "tcv";
+            std::string password;
+            // 可选: SSL 模式 disable / prefer / require / verify-ca / verify-full
+            std::string sslmode = "prefer";
+        } pgsql;
+
+        // ── MySQL ──
+        struct Mysql {
+            std::string host = "127.0.0.1";
+            int port = 3306;
+            std::string dbname = "tcv";
+            std::string user = "tcv";
+            std::string password;
+            int connect_timeout_sec = 10;
+        } mysql;
     };
 
     struct SecurityConfig {
@@ -82,6 +106,24 @@ namespace tcv {
                     db_.type = n["type"].as<std::string>(db_.type);
                     if (db_.type == "sqlite" && n["sqlite_path"])
                         db_.sqlite_path = n["sqlite_path"].as<std::string>();
+
+                    if (auto pg = n["postgresql"]) {
+                        db_.pgsql.host         = pg["host"].as<std::string>(db_.pgsql.host);
+                        db_.pgsql.port         = pg["port"].as<int>(db_.pgsql.port);
+                        db_.pgsql.dbname       = pg["dbname"].as<std::string>(db_.pgsql.dbname);
+                        db_.pgsql.user         = pg["user"].as<std::string>(db_.pgsql.user);
+                        db_.pgsql.password     = pg["password"].as<std::string>(db_.pgsql.password);
+                        db_.pgsql.sslmode      = pg["sslmode"].as<std::string>(db_.pgsql.sslmode);
+                    }
+
+                    if (auto my = n["mysql"]) {
+                        db_.mysql.host              = my["host"].as<std::string>(db_.mysql.host);
+                        db_.mysql.port              = my["port"].as<int>(db_.mysql.port);
+                        db_.mysql.dbname            = my["dbname"].as<std::string>(db_.mysql.dbname);
+                        db_.mysql.user              = my["user"].as<std::string>(db_.mysql.user);
+                        db_.mysql.password          = my["password"].as<std::string>(db_.mysql.password);
+                        db_.mysql.connect_timeout_sec = my["connect_timeout_sec"].as<int>(db_.mysql.connect_timeout_sec);
+                    }
                 }
 
                 if (auto n = root["security"]) {

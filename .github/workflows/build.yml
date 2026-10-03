@@ -302,8 +302,7 @@ jobs:
                   name: TingCloudVerifier-macos-x64
                   path: dist
 
-    # ── PostgreSQL backend smoke test ──
-    pg-test:
+    pgsql-test:
         runs-on: ubuntu-24.04
         services:
             postgres:
@@ -330,7 +329,6 @@ jobs:
                   ./vcpkg/vcpkg install --x-feature=postgres
                   --triplet=x64-linux
                   --x-manifest-root=.
-                  --disable-parallel
             - name: CMake Configure
               run: >
                   cmake -B build -S .
@@ -369,7 +367,6 @@ jobs:
                     -d '{"username":"root","password":"Root123!","display_name":"root"}'
                   echo "PostgreSQL backend PASSED"
 
-    # ── MySQL backend smoke test ──
     mysql-test:
         runs-on: ubuntu-24.04
         services:
@@ -398,7 +395,6 @@ jobs:
                   ./vcpkg/vcpkg install --x-feature=mysql
                   --triplet=x64-linux
                   --x-manifest-root=.
-                  --disable-parallel
             - name: CMake Configure
               run: >
                   cmake -B build -S .
@@ -464,6 +460,7 @@ jobs:
                   name: TingCloudVerifier ${{ github.ref_name }}
                   files: artifacts/*
                   prerelease: ${{ contains(github.ref_name, '-') }}
+
 
 
 

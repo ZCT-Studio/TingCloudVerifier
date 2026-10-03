@@ -9,7 +9,7 @@
         },
         "mysql": {
             "description": "MySQL / MariaDB backend support via libmysqlclient",
-            "dependencies": ["libmysqlclient"]
+            "dependencies": ["libmysql"]
         }
     },
     "default-features": [],
@@ -21,4 +21,5 @@
         "argon2"
     ]
 }
+
 
