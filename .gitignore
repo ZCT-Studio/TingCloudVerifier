@@ -29,3 +29,8 @@ vcpkg/
 
 # Local tests
 localtests/
+
+# NPM
+node_modules
+.npmignore
+package-lock.json
