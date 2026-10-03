@@ -220,7 +220,77 @@ APP 级粒度（`app.dec_mode`），所有 `/api/v1/client/*` 请求/响应同�
 
 ## 数据库
 
-项目迁移脚本位于 `migrations/`，首次启动自动顺序执行。当前三张业务主表：
+三后端支持 — 运行时通过 `config.yaml database.type` 切换，repo/service 层零改动：
+
+| 后端 | 特点 | vcpkg feature | 本地启动方式 |
+|---|---|---|---|
+| **SQLite** (默认) | 零依赖、单文件、适合单机/嵌入式 | 默认启用 | 无需额外服务 |
+| **PostgreSQL** | 生产级、并发好、推荐多节点部署 | `postgres` | `docker run -p 5432:5432 postgres:16` |
+| **MySQL / MariaDB** | 广泛使用、生态成熟 | `mysql` | `docker run -p 3306:3306 mysql:8.4` |
+
+### 启用可选后端
+
+```bash
+# PostgreSQL
+vcpkg install tingcloudverifier[postgres]
+
+# MySQL
+vcpkg install tingcloudverifier[mysql]
+
+# 两个都装 (一次编进去, 运行时二选一)
+vcpkg install tingcloudverifier[postgres,mysql]
+```
+
+然后在 `config/config.yaml` 里切：
+
+```yaml
+# Postgres 示例
+database:
+  type: "postgresql"
+  postgresql:
+    host: "127.0.0.1"
+    port: 5432
+    dbname: "tcv"
+    user: "tcv"
+    password: "xxx"
+    sslmode: "prefer"
+
+# MySQL 示例
+database:
+  type: "mysql"
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    dbname: "tcv"
+    user: "tcv"
+    password: "xxx"
+    connect_timeout_sec: 10
+```
+
+### Migration 目录结构
+
+```
+migrations/
+├── sqlite/      ← SQLite 方言 SQL (INTEGER PRIMARY KEY AUTOINCREMENT, strftime, INSERT OR IGNORE)
+├── pgsql/       ← PostgreSQL 方言 (BIGSERIAL, EXTRACT(EPOCH FROM NOW()), ON CONFLICT DO NOTHING)
+├── mysql/       ← MySQL 方言 (BIGINT AUTO_INCREMENT, UNIX_TIMESTAMP(), INSERT IGNORE)
+└── 001_initial.sql  ← legacy fallback (MigrationRunner 找不到 backend dir 时使用)
+```
+
+后端切换后 MigrationRunner 自动选对应目录。不存在时 fallback 到根目录（WARN 提示）。
+
+### 内部架构
+
+```cpp
+IDatabase (纯虚接口)
+├── SqliteDatabase     — sqlite3 C API
+├── PgsqlDatabase      — libpq C API + adaptParams(? → $1 $2 ...)
+└── MysqlDatabase      — libmysqlclient prepared statements
+
+Database::instance()    — 门面类, repo/service 层零改动
+```
+
+### 业务主表（三后端共用）
 
 ```
 apps           — 应用（APPID 全局唯一，有 dec_mode/dec_key/sign_enable/notice）
@@ -230,6 +300,7 @@ update_channels — 版本通道（APP 创建时自动建 stable/rc/canary/alpha
 nonces         — 防重放 nonce（APPID + nonce 唯一）
 ip_whitelist   — LOCAL 安全等级白名单
 audit_logs     — 审计日志
+schema_migrations — 版本控制（MigrationRunner 自动建）
 ```
 
 ## 构建产物

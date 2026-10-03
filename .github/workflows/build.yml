@@ -301,7 +301,142 @@ jobs:
               with:
                   name: TingCloudVerifier-macos-x64
                   path: dist
-    
+
+    # ── PostgreSQL backend smoke test ──
+    pg-test:
+        runs-on: ubuntu-24.04
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_PASSWORD: tcv_test
+                    POSTGRES_DB: tcv
+                    POSTGRES_USER: tcv
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd="pg_isready"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=5
+        steps:
+            - uses: actions/checkout@v4
+            - name: Bootstrap vcpkg
+              run: |
+                  git clone --depth 1 https://github.com/microsoft/vcpkg.git vcpkg
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+            - name: Install deps (postgres feature)
+              run: >
+                  ./vcpkg/vcpkg install tingcloudverifier[postgres]
+                  --triplet=x64-linux-static
+                  --x-manifest-root=.
+                  --disable-parallel
+            - name: CMake Configure
+              run: >
+                  cmake -B build -S .
+                  -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+                  -DVCPKG_TARGET_TRIPLET=x64-linux-static
+                  -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build --config Release -j
+            - name: Smoke test
+              run: |
+                  set -e
+                  mkdir -p build/config build/data
+                  cp -r migrations build/migrations
+                  cat > build/config/config.yaml <<'YAML'
+                  server:
+                    host: "127.0.0.1"
+                    port: 10221
+                  database:
+                    type: "postgresql"
+                    postgresql:
+                      host: "127.0.0.1"
+                      port: 5432
+                      dbname: "tcv"
+                      user: "tcv"
+                      password: "tcv_test"
+                      sslmode: "disable"
+                  security:
+                    admin_security_level: "LAN"
+                    replay_window_seconds: 60
+                  YAML
+                  cd build
+                  ./TingCloudVerifier > /tmp/tcv.log 2>&1 &
+                  sleep 3
+                  curl -s -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10221/api/v1/auth/bootstrap-admin \
+                    -H 'Content-Type: application/json' \
+                    -d '{"username":"root","password":"Root123!","display_name":"root"}'
+                  echo "PostgreSQL backend PASSED"
+
+    # ── MySQL backend smoke test ──
+    mysql-test:
+        runs-on: ubuntu-24.04
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ROOT_PASSWORD: tcv_test
+                    MYSQL_DATABASE: tcv
+                    MYSQL_USER: tcv
+                    MYSQL_PASSWORD: tcv_test
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd="mysqladmin ping -h localhost"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=10
+        steps:
+            - uses: actions/checkout@v4
+            - name: Bootstrap vcpkg
+              run: |
+                  git clone --depth 1 https://github.com/microsoft/vcpkg.git vcpkg
+                  ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+            - name: Install deps (mysql feature)
+              run: >
+                  ./vcpkg/vcpkg install tingcloudverifier[mysql]
+                  --triplet=x64-linux-static
+                  --x-manifest-root=.
+                  --disable-parallel
+            - name: CMake Configure
+              run: >
+                  cmake -B build -S .
+                  -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
+                  -DVCPKG_TARGET_TRIPLET=x64-linux-static
+                  -DCMAKE_BUILD_TYPE=Release
+            - name: Build
+              run: cmake --build build --config Release -j
+            - name: Smoke test
+              run: |
+                  set -e
+                  mkdir -p build/config
+                  cp -r migrations build/migrations
+                  cat > build/config/config.yaml <<'YAML'
+                  server:
+                    host: "127.0.0.1"
+                    port: 10222
+                  database:
+                    type: "mysql"
+                    mysql:
+                      host: "127.0.0.1"
+                      port: 3306
+                      dbname: "tcv"
+                      user: "tcv"
+                      password: "tcv_test"
+                      connect_timeout_sec: 10
+                  security:
+                    admin_security_level: "LAN"
+                    replay_window_seconds: 60
+                  YAML
+                  cd build
+                  ./TingCloudVerifier > /tmp/tcv.log 2>&1 &
+                  sleep 5
+                  curl -s -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10222/api/v1/auth/bootstrap-admin \
+                    -H 'Content-Type: application/json' \
+                    -d '{"username":"root","password":"Root123!","display_name":"root"}'
+                  echo "MySQL backend PASSED"
+
     release:
         if: startsWith(github.ref, 'refs/tags/v')
         needs:
