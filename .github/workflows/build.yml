@@ -328,14 +328,14 @@ jobs:
             - name: Install deps (postgres feature)
               run: >
                   ./vcpkg/vcpkg install tingcloudverifier[postgres]
-                  --triplet=x64-linux-static
+                  --triplet=x64-linux
                   --x-manifest-root=.
                   --disable-parallel
             - name: CMake Configure
               run: >
                   cmake -B build -S .
                   -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
-                  -DVCPKG_TARGET_TRIPLET=x64-linux-static
+                  -DVCPKG_TARGET_TRIPLET=x64-linux
                   -DCMAKE_BUILD_TYPE=Release
             - name: Build
               run: cmake --build build --config Release -j
@@ -396,14 +396,14 @@ jobs:
             - name: Install deps (mysql feature)
               run: >
                   ./vcpkg/vcpkg install tingcloudverifier[mysql]
-                  --triplet=x64-linux-static
+                  --triplet=x64-linux
                   --x-manifest-root=.
                   --disable-parallel
             - name: CMake Configure
               run: >
                   cmake -B build -S .
                   -DCMAKE_TOOLCHAIN_FILE="vcpkg/scripts/buildsystems/vcpkg.cmake"
-                  -DVCPKG_TARGET_TRIPLET=x64-linux-static
+                  -DVCPKG_TARGET_TRIPLET=x64-linux
                   -DCMAKE_BUILD_TYPE=Release
             - name: Build
               run: cmake --build build --config Release -j
@@ -464,3 +464,4 @@ jobs:
                   name: TingCloudVerifier ${{ github.ref_name }}
                   files: artifacts/*
                   prerelease: ${{ contains(github.ref_name, '-') }}
+
