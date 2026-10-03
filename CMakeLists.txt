@@ -95,13 +95,13 @@ else()
     set(TCV_HAS_PGSQL OFF)
 endif()
 
-# MySQL/MariaDB: 运行时支持, 需要 vcpkg install libmysqlclient
-find_package(unofficial-libmysqlclient CONFIG QUIET)
-if(TARGET unofficial::libmysqlclient::libmysqlclient)
-    message(STATUS "MySQL (libmysqlclient) FOUND — enabling TCV_HAS_MYSQL")
+# MySQL/MariaDB: 运行时支持, 需要 vcpkg install libmysql
+find_package(unofficial-libmysql CONFIG QUIET)
+if(TARGET unofficial::libmysql::libmysql)
+    message(STATUS "MySQL (libmysql) FOUND — enabling TCV_HAS_MYSQL")
     set(TCV_HAS_MYSQL ON)
 else()
-    message(STATUS "MySQL (libmysqlclient) NOT found — TCV will run WITHOUT MySQL support")
+    message(STATUS "MySQL (libmysql) NOT found — TCV will run WITHOUT MySQL support")
     set(TCV_HAS_MYSQL OFF)
 endif()
 
@@ -119,7 +119,7 @@ if(TCV_HAS_PGSQL)
 endif()
 
 if(TCV_HAS_MYSQL)
-    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libmysqlclient::libmysqlclient)
+    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libmysql::libmysql)
     target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_MYSQL=1)
 endif()
 
@@ -137,3 +137,4 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
 endif()
+
