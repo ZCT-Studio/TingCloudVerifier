@@ -20,31 +20,15 @@
 #define TCV_API_V1_CLIENT_LICENSE_VERIFY
 
 #include "api/v1/uih.h"
-#include "crypto/crypto.hpp"
 
 namespace tcv::inside::api::v1::client::license::verify {
-
-namespace {
-// Parse "k=v&k2=v2..." urlencoded form -> key/value map
-inline void parseKvs(const std::string& body, std::function<void(const std::string&, const std::string&)> cb) {
-    size_t pos = 0;
-    while (pos < body.size()) {
-        size_t amp = body.find('&', pos);
-        std::string pair = (amp == std::string::npos) ? body.substr(pos) : body.substr(pos, amp - pos);
-        size_t eq = pair.find('=');
-        if (eq != std::string::npos) {
-            cb(pair.substr(0, eq), pair.substr(eq + 1));
-        }
-        if (amp == std::string::npos) break;
-        pos = amp + 1;
-    }
-}
-}
 
 inline void handle(
     const drogon::HttpRequestPtr& req,
     std::function<void(const drogon::HttpResponsePtr &)>&& cb
 ) {
+    // wrap() 已经在 paramStr 之前处理了 encode 解密 → attributes.tcv.decoded_kv
+    // 如果请求没加密，paramStr 正常从 query/form/header/json 取值
     auto appid = tcv::inside::api::v1::common::paramStr(req, "appid");
     auto license_plain = tcv::inside::api::v1::common::paramStr(req, "license");
     auto device = tcv::inside::api::v1::common::paramStr(req, "device");
@@ -60,47 +44,6 @@ inline void handle(
         cb(drogon::HttpResponse::newHttpJsonResponse(
             tcv::api::makeFail(tcv::api::ErrorCode::APP_DISABLED, "APP 已禁用")));
         return;
-    }
-
-    // ── Decode layer (optional, per app dec_mode) ──
-    auto encode = tcv::inside::api::v1::common::paramStr(req, "encode");
-    if (app->dec_mode != "NONE") {
-        if (encode.empty()) {
-            cb(drogon::HttpResponse::newHttpJsonResponse(
-                tcv::api::makeFail(tcv::api::ErrorCode::BAD_REQUEST, "missing encode")));
-            return;
-        }
-
-        std::string decoded;
-        bool ok = true;
-
-        if (app->dec_mode == "AES256-GCM") {
-            const auto blob = tcv::crypto::base64Decode(encode);
-            const auto key_raw = tcv::crypto::fromHex(app->dec_key);
-            decoded = tcv::crypto::aes256GcmDecrypt(blob, key_raw);
-            ok = !decoded.empty();
-        } else if (app->dec_mode == "BASE64") {
-            decoded = tcv::crypto::base64Decode(encode);
-        } else if (app->dec_mode == "HEX") {
-            decoded = tcv::crypto::fromHex(encode);
-        } else {
-            cb(drogon::HttpResponse::newHttpJsonResponse(
-                tcv::api::makeFail(tcv::api::ErrorCode::BAD_REQUEST, "bad dec_mode")));
-            return;
-        }
-
-        if (!ok) {
-            cb(drogon::HttpResponse::newHttpJsonResponse(
-                tcv::api::makeFail(tcv::api::ErrorCode::BAD_REQUEST, "decode failed")));
-            return;
-        }
-
-        // Apply decoded body fields (override license/device if present)
-        parseKvs(decoded, [&](const std::string& k, const std::string& v) {
-            if (k == "license") license_plain = v;
-            else if (k == "device") device = v;
-            else if (k == "appid" && appid.empty()) appid = v;
-        });
     }
 
     if (license_plain.empty()) {

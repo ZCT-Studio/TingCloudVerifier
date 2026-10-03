@@ -22,11 +22,15 @@
 #include <chrono>
 #include <exception>
 #include <functional>
+#include <map>
+#include <sstream>
 #include <utility>
 #include <string>
 #include <drogon/drogon.h>
+#include <json/json.h>
 #include "api/response.hpp"
 #include "common/logger.hpp"
+#include "crypto/crypto.hpp"
 #include "database/database.hpp"
 #include "repositories/license_repo.hpp"
 #include "repositories/user_app_repo.hpp"
@@ -34,11 +38,80 @@
 #include "services/security_service.hpp"
 
 namespace tcv::inside::api::v1::common {
-    inline std::string paramStr(
-        const drogon::HttpRequestPtr& req,
-        const std::string& key,
-        const std::string& def = ""
-    ) {
+
+// ── URL k=v 解析（verify.hpp 原本有一份，提成公共） ──
+inline std::map<std::string, std::string> parseKvs(const std::string& body) {
+    std::map<std::string, std::string> out;
+    size_t pos = 0;
+    while (pos < body.size()) {
+        size_t amp = body.find('&', pos);
+        std::string pair = (amp == std::string::npos) ? body.substr(pos) : body.substr(pos, amp - pos);
+        size_t eq = pair.find('=');
+        if (eq != std::string::npos) {
+            out[pair.substr(0, eq)] = pair.substr(eq + 1);
+        }
+        if (amp == std::string::npos) break;
+        pos = amp + 1;
+    }
+    return out;
+}
+
+// ── AES256-GCM / BASE64 / HEX 统一加密（响应） ──
+// plaintext: 要加密的明文（通常是 JSON 字符串）
+// dec_mode: AES256-GCM / BASE64 / HEX / NONE（NONE 不应该调用本函数）
+// dec_key: hex-encoded AES key（仅 AES256-GCM 需要，其他忽略）
+inline std::string encryptByMode(
+    const std::string& plaintext,
+    const std::string& dec_mode,
+    const std::string& dec_key
+) {
+    if (dec_mode == "AES256-GCM") {
+        const auto key_raw = tcv::crypto::fromHex(dec_key);
+        const auto blob = tcv::crypto::aes256GcmEncrypt(plaintext, key_raw);
+        return tcv::crypto::base64Encode(blob);
+    } else if (dec_mode == "BASE64") {
+        return tcv::crypto::base64Encode(plaintext);
+    } else if (dec_mode == "HEX") {
+        return tcv::crypto::toHex(plaintext);
+    }
+    return plaintext; // NONE 或未知 → 明文返回
+}
+
+// ── AES256-GCM / BASE64 / HEX 统一解密（请求） ──
+// 返回解密后的 URL k=v 字符串（或空表示失败）
+inline std::string decryptByMode(
+    const std::string& encoded,
+    const std::string& dec_mode,
+    const std::string& dec_key
+) {
+    if (dec_mode == "AES256-GCM") {
+        const auto blob = tcv::crypto::base64Decode(encoded);
+        const auto key_raw = tcv::crypto::fromHex(dec_key);
+        return tcv::crypto::aes256GcmDecrypt(blob, key_raw);
+    } else if (dec_mode == "BASE64") {
+        return tcv::crypto::base64Decode(encoded);
+    } else if (dec_mode == "HEX") {
+        return tcv::crypto::fromHex(encoded);
+    }
+    return {};
+}
+
+// ── 从请求取参数：优先用 wrap() 解密后注入的 decoded_kv ──
+inline std::string paramStr(
+    const drogon::HttpRequestPtr& req,
+    const std::string& key,
+    const std::string& def = ""
+) {
+    // 1. 优先查 wrap() 里 decrypted 的 encode 内容（URL k=v 对）
+    auto attrs = req->attributes();
+    if (attrs && attrs->find("tcv.decoded_kv")) {
+        try {
+            auto m = attrs->get<std::map<std::string, std::string>>("tcv.decoded_kv");
+            if (auto it = m.find(key); it != m.end() && !it->second.empty()) return it->second;
+        } catch (...) {}
+    }
+
+    // 2. 再查常规参数（query / form / header / json body）
         auto& p = req->getParameters();
         if (const auto it = p.find(key); it != p.end() && !it->second.empty()) return it->second;
 
@@ -224,52 +297,117 @@ namespace tcv::inside::api::v1::common {
                         );
                         return;
                     }
-                    auto nonce_it = params.find("nonce");
-                    auto appid_it = params.find("appid");
-                    if (nonce_it != params.end() && appid_it != params.end()) {
-                        auto app = tcv::repo::AppRepo::findByAppid(appid_it->second);
-                        if (app) {
-                            if (!tcv::repo::NonceRepo::tryUseNonce(
-                                app->id,
-                                nonce_it->second,
-                                ts,
-                                cfg.replay_window_seconds
-                            )) {
-                                cb(
-                                    drogon::HttpResponse::newHttpJsonResponse(
-                                        tcv::api::makeFail(tcv::api::ErrorCode::NONCE_REPLAY, "nonce 重复")
-                                    )
-                                );
-                                return;
-                            }
 
-                            // sign_enable=1 时强制 HMAC-SHA256 签名校验
-                            if (app->sign_enable == 1) {
-                                const auto sig_it = params.find("signature");
-                                if (sig_it == params.end() || sig_it->second.empty()) {
-                                    cb(drogon::HttpResponse::newHttpJsonResponse(
-                                        tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "缺少 signature")));
-                                    return;
-                                }
-                                const auto encode_it = params.find("encode");
-                                const std::string encode_val = (encode_it != params.end()) ? encode_it->second : std::string();
-                                const auto canonical = tcv::service::SecurityService::canonicalRequest(
-                                    method,
-                                    req_path,
-                                    appid_it->second,
-                                    it->second,
-                                    nonce_it->second,
-                                    encode_val
-                                );
-                                if (auto expected = tcv::service::SecurityService::computeSignature(canonical, app->secret);
-                                    expected != sig_it->second) {
-                                    cb(drogon::HttpResponse::newHttpJsonResponse(
-                                        tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "signature 校验失败")));
-                                    return;
-                                }
+                    // ── 查 app（所有 client API 都需要 appid，提前拿到 dec_mode ──
+                    auto appid_it = params.find("appid");
+                    std::shared_ptr<tcv::repo::models::App> app;
+                    if (appid_it != params.end() && !appid_it->second.empty()) {
+                        app = tcv::repo::AppRepo::findByAppid(appid_it->second);
+                    }
+
+                    // ── 请求体解密（若 app 配置了 dec_mode 且请求带 encode）──
+                    bool request_encrypted = false;
+                    std::string used_dec_mode;
+                    if (app && app->dec_mode != "NONE") {
+                        auto encode_it = params.find("encode");
+                        if (encode_it != params.end() && !encode_it->second.empty()) {
+                            auto decoded = decryptByMode(encode_it->second, app->dec_mode, app->dec_key);
+                            if (!decoded.empty()) {
+                                auto kv = parseKvs(decoded);
+                                (*req->attributes())["tcv.decoded_kv"] = kv;
+                                request_encrypted = true;
+                                used_dec_mode = app->dec_mode;
+                            } else {
+                                cb(drogon::HttpResponse::newHttpJsonResponse(
+                                    tcv::api::makeFail(tcv::api::ErrorCode::BAD_REQUEST, "encode 解密失败")));
+                                return;
                             }
                         }
                     }
+
+                    // ── nonce 防重放 ──
+                    auto nonce_it = params.find("nonce");
+                    if (app && nonce_it != params.end() && !nonce_it->second.empty()) {
+                        if (!tcv::repo::NonceRepo::tryUseNonce(
+                            app->id,
+                            nonce_it->second,
+                            ts,
+                            cfg.replay_window_seconds
+                        )) {
+                            cb(
+                                drogon::HttpResponse::newHttpJsonResponse(
+                                    tcv::api::makeFail(tcv::api::ErrorCode::NONCE_REPLAY, "nonce 重复")
+                                )
+                            );
+                            return;
+                        }
+
+                        // ── sign_enable=1 时强制 HMAC-SHA256 签名校验 ──
+                        if (app->sign_enable == 1) {
+                            const auto sig_it = params.find("signature");
+                            if (sig_it == params.end() || sig_it->second.empty()) {
+                                cb(drogon::HttpResponse::newHttpJsonResponse(
+                                    tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "缺少 signature")));
+                                return;
+                            }
+                            const auto encode_it = params.find("encode");
+                            const std::string encode_val = (encode_it != params.end()) ? encode_it->second : std::string();
+                            const auto canonical = tcv::service::SecurityService::canonicalRequest(
+                                method,
+                                req_path,
+                                appid_it->second,
+                                it->second,
+                                nonce_it->second,
+                                encode_val
+                            );
+                            if (auto expected = tcv::service::SecurityService::computeSignature(canonical, app->secret);
+                                expected != sig_it->second) {
+                                cb(drogon::HttpResponse::newHttpJsonResponse(
+                                    tcv::api::makeFail(tcv::api::ErrorCode::SIGNATURE_BAD, "signature 校验失败")));
+                                return;
+                            }
+                        }
+                    }
+
+                    // ── 包装 cb：若请求加密，响应也用同算法加密 ──
+                    auto orig_cb = std::move(cb);
+                    auto wrapped_cb = [
+                        orig_cb = std::move(orig_cb),
+                        request_encrypted,
+                        used_dec_mode,
+                        dec_key = app ? app->dec_key : std::string()
+                    ](const drogon::HttpResponsePtr& resp) {
+                        if (!request_encrypted) {
+                            orig_cb(resp);
+                            return;
+                        }
+                        // 把 handler 输出的 JSON body 加密后替换成 {"encode":"..."}
+                        const auto body = resp->body();
+                        auto json = Json::Value::null;
+                        Json::CharReaderBuilder rb;
+                        auto errs = std::string{};
+                        std::istringstream iss(body);
+                        if (Json::parseFromStream(rb, iss, &json, &errs) && json.isObject()) {
+                            Json::Value wrapped;
+                            if (json.isMember("code"))      wrapped["code"] = json["code"];
+                            if (json.isMember("message"))   wrapped["message"] = json["message"];
+                            if (json.isMember("data"))      wrapped["data"] = json["data"];
+                            std::string orig_str;
+                            Json::StreamWriterBuilder wb;
+                            wb["indentation"] = "";
+                            orig_str = Json::writeString(wb, json);
+
+                            const auto enc = encryptByMode(orig_str, used_dec_mode, dec_key);
+                            Json::Value out;
+                            out["code"] = json.isMember("code") ? json["code"].asInt() : 0;
+                            out["message"] = json.isMember("message") ? json["message"].asString() : "ok";
+                            out["encode"] = enc;
+                            auto new_body = Json::writeString(wb, out);
+                            resp->setBody(new_body);
+                        }
+                        orig_cb(resp);
+                    };
+                    cb = std::move(wrapped_cb);
                 }
                 fn(req, std::move(cb));
                 auto t1 = std::chrono::steady_clock::now();
