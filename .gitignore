@@ -30,5 +30,5 @@ vcpkg/
 # Local tests
 localtests/
 
-# NPM
-node_modules
+# NodeJS
+node_modules/
