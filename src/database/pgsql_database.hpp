@@ -153,7 +153,7 @@ namespace tcv::db {
                     if (c == '*' && i + 1 < sql.size() && sql[i + 1] == '/') { out += '/'; ++i; in_block_comment = false; }
                     continue;
                 }
-                if (c == '-' && i + 1 < sql.size() && sql[i + 1] == '-') { in_line_comment = true; out += '--'; ++i; continue; }
+                if (c == '-' && i + 1 < sql.size() && sql[i + 1] == '-') { in_line_comment = true; out += "--"; ++i; continue; }
                 if (c == '/' && i + 1 < sql.size() && sql[i + 1] == '*') { in_block_comment = true; out += "/*"; ++i; continue; }
                 if (!in_double && c == '\'') { in_single = !in_single; out += c; continue; }
                 if (!in_single && c == '"') { in_double = !in_double; out += c; continue; }

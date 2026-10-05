@@ -4,21 +4,34 @@ find_package(yaml-cpp               CONFIG REQUIRED)
 find_package(OpenSSL                REQUIRED)
 find_package(unofficial-argon2      CONFIG REQUIRED)
 
-# ── jsoncpp Debug/Release 路径修复 ──
-# Drogon 自带的 FindJsoncpp.cmake 用 find_library(NAMES jsoncpp) 不区分 config,
-# 它本来有的 debug/optimized 区分代码被注释掉了.
-# 覆盖它创建的 Jsoncpp_lib INTERFACE target, 用 generator expression 区分路径.
-# 先清掉 FindJsoncpp.cmake 设置的单一路径, 再加回 config-sensitive 的.
+# ── jsoncpp: 修正 Debug/Release 混合链接 ──
+# Drogon 自带 FindJsoncpp.cmake (Module) 只用 find_library 找一个库,
+# 不区分 config. vcpkg static triplet 下 Debug 版在 <triplet>/debug/lib/,
+# Release 在 <triplet>/lib/, Drogon 会找 Release 版 → Debug 构建 CRT 混链.
+# 非 static triplet (x64-linux, arm64-osx 等动态 triplet), 所有 config
+# 共用 <triplet>/lib/, 不需要 debug 分支.
+# 修复: 只有 debug/lib/ 存在时才启用 generator expression, 否则保持 Drogon 原生结果.
 if(TARGET Jsoncpp_lib AND VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
-    set(_jsoncpp_debug "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib/jsoncpp.lib")
-    set(_jsoncpp_release "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib/jsoncpp.lib")
-    # 清掉旧的, 用 target_link_libraries 加新的 (接受 generator expression)
-    set_target_properties(Jsoncpp_lib PROPERTIES INTERFACE_LINK_LIBRARIES "")
-    target_link_libraries(Jsoncpp_lib INTERFACE
-        "$<$<CONFIG:Debug>:${_jsoncpp_debug}>"
-        "$<$<NOT:$<CONFIG:Debug>>:${_jsoncpp_release}>"
-    )
-    message(STATUS "Patched Jsoncpp_lib: Debug→${_jsoncpp_debug}, Release→${_jsoncpp_release}")
+    set(_icd_root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+    if(WIN32)
+        set(_jl_suffix ".lib")
+    else()
+        set(_jl_suffix ".a")
+    endif()
+
+    set(_jl_release "${_icd_root}/lib/jsoncpp${_jl_suffix}")
+    set(_jl_debug   "${_icd_root}/debug/lib/jsoncpp${_jl_suffix}")
+
+    if(EXISTS "${_jl_debug}")
+        set_target_properties(Jsoncpp_lib PROPERTIES INTERFACE_LINK_LIBRARIES "")
+        target_link_libraries(Jsoncpp_lib INTERFACE
+            "$<$<CONFIG:Debug>:${_jl_debug}>"
+            "$<$<NOT:$<CONFIG:Debug>>:${_jl_release}>"
+        )
+        message(STATUS "Patched Jsoncpp_lib (static triplet): Debug=${_jl_debug}, Release=${_jl_release}")
+    else()
+        message(STATUS "Jsoncpp_lib: no debug/lib (non-static triplet), keeping Drogon native result")
+    endif()
 endif()
 
 # vcpkg triplet 下 IMPORTED_LOCATION 可能在不同位置, 统一尝试所有属性
