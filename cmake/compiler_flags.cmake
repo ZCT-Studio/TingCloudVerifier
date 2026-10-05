@@ -4,11 +4,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(MSVC)
     add_compile_options(/utf-8)
-    add_compile_definitions(
-        WIN32_LEAN_AND_MEAN
-        NOMINMAX
-        NOGDI
-    )
+    add_compile_definitions(NOMINMAX)
+    # vcpkg static triplet: Debug=/MTd, Release=/MT (跟 Drogon/yaml-cpp 等对齐)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
