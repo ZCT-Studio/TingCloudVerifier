@@ -87,15 +87,20 @@ int main(const int argc, char** argv) {
         if (nthreads == 0) nthreads = 4;
 
         auto& svr = drogon::app();
-        const auto& srv_cfg = cfg.server();
 
-        if (!srv_cfg.ipv4_host.empty()) {
-            tcv::logger().INFO("Listening IPv4 {}:{}, {} threads", srv_cfg.ipv4_host, srv_cfg.port, nthreads);
-            svr.addListener(srv_cfg.ipv4_host, srv_cfg.port);
-        }
-        if (!srv_cfg.ipv6_host.empty()) {
-            tcv::logger().INFO("Listening IPv6 [{}]:{}, {} threads", srv_cfg.ipv6_host, srv_cfg.port, nthreads);
-            svr.addListener(srv_cfg.ipv6_host, srv_cfg.port);
+        if (const auto& [ipv4_host, ipv6_host, port] = cfg.server(); !ipv4_host.empty() && !ipv6_host.empty()) {
+            tcv::logger().INFO("Listening IPv4 {}:{} and IPv6 [{}]:{}, {} threads", ipv4_host, port, ipv6_host, port, nthreads);
+            svr.addListener(ipv4_host, port);
+            svr.addListener(ipv6_host, port);
+        } else {
+            if (!ipv4_host.empty()) {
+                tcv::logger().INFO("Listening IPv4 {}:{}, {} threads", ipv4_host, port, nthreads);
+                svr.addListener(ipv4_host, port);
+            }
+            if (!ipv6_host.empty()) {
+                tcv::logger().INFO("Listening IPv6 [{}]:{}, {} threads", ipv6_host, port, nthreads);
+                svr.addListener(ipv6_host, port);
+            }
         }
 
         svr.setThreadNum(nthreads)
