@@ -1,49 +1,60 @@
 # ── PostgreSQL (libpq) ──
-# vcpkg libpq 没有 CMake Config, 只能用 CMake 自带 FindPostgreSQL.cmake (Module).
-# GitHub Runner 预装了 C:\Program Files\PostgreSQL\XX\lib\libpq.lib (x64),
-# find_package(PostgreSQL) 会先扫系统默认路径, x86 构建抢系统 x64 → LNK4272.
-# 解决方案: 绕过 find_package, 手动 find_library / find_path 仅在 vcpkg 目录找.
+# vcpkg 重写了 find_package (toolchain.cmake L788), 调 find_package(PostgreSQL) 时会自动 include
+#   share/postgresql/vcpkg-cmake-wrapper.cmake
+# wrapper 先 find_library(PostgreSQL_LIBRARY_RELEASE NAMES pq libpq PATHS vcpkg_root/lib NO_DEFAULT_PATH REQUIRED)
+# 再 _find_package(PostgreSQL) —— 原生 FindPostgreSQL.cmake 发现变量已预填, 不会扫系统路径.
+# 所以 find_package(PostgreSQL) 在 Windows(不会抢 C:\Program Files) / Linux / macOS 都安全.
 set(TCV_HAS_PGSQL OFF)
+
+# 先检查 vcpkg 是否真的装了 libpq (wrapper 是否存在)
 if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
-    set(_pq_root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-
-    find_path(PQ_INCLUDE_DIR
-        NAMES libpq-fe.h postgres_ext.h
-        PATHS "${_pq_root}/include"
-        NO_DEFAULT_PATH)
-
-    find_library(PQ_LIBRARY
-        NAMES pq libpq
-        PATHS "${_pq_root}/lib" "${_pq_root}/debug/lib"
-        NO_DEFAULT_PATH)
-
-    if(PQ_INCLUDE_DIR AND PQ_LIBRARY)
-        if(NOT TARGET PostgreSQL::PostgreSQL)
-            add_library(PostgreSQL::PostgreSQL UNKNOWN IMPORTED)
-            set_target_properties(PostgreSQL::PostgreSQL PROPERTIES
-                IMPORTED_LOCATION "${PQ_LIBRARY}"
-                INTERFACE_INCLUDE_DIRECTORIES "${PQ_INCLUDE_DIR}")
-        endif()
-        message(STATUS "PostgreSQL (libpq) FOUND via vcpkg: ${PQ_LIBRARY}")
-        set(TCV_HAS_PGSQL ON)
+    set(_pq_wrapper "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/postgresql/vcpkg-cmake-wrapper.cmake")
+    if(EXISTS "${_pq_wrapper}")
+        message(STATUS "PostgreSQL wrapper found: ${_pq_wrapper}")
     else()
-        message(STATUS "PostgreSQL (libpq) NOT found in vcpkg root=${_pq_root} — TCV without PostgreSQL")
+        message(STATUS "PostgreSQL wrapper NOT found at ${_pq_wrapper} — vcpkg probably didn't install libpq")
     endif()
 else()
-    message(STATUS "PostgreSQL (libpq): VCPKG_INSTALLED_DIR not set — TCV without PostgreSQL")
+    message(STATUS "PostgreSQL: VCPKG_INSTALLED_DIR=${VCPKG_INSTALLED_DIR}, VCPKG_TARGET_TRIPLET=${VCPKG_TARGET_TRIPLET}")
+endif()
+
+find_package(PostgreSQL QUIET)
+if(TARGET PostgreSQL::PostgreSQL)
+    message(STATUS "PostgreSQL (libpq) FOUND via find_package(PostgreSQL) — enabling TCV_HAS_PGSQL")
+    set(TCV_HAS_PGSQL ON)
+else()
+    message(STATUS "PostgreSQL (libpq) NOT found — TCV will run WITHOUT PostgreSQL support")
+    if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
+        set(_pq_root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+        message(STATUS "  vcpkg root = ${_pq_root}")
+        if(EXISTS "${_pq_root}/include/libpq-fe.h")
+            message(STATUS "  include EXISTS but library not found — check .so symlinks")
+        else()
+            message(STATUS "  include NOT FOUND — libpq port may not have been installed")
+        endif()
+    endif()
 endif()
 
 # ── MySQL / MariaDB (libmariadb) ──
-# libmariadb (MariaDB Connector/C) 纯客户端, Linux 不需要 libaio 等 server 依赖.
-# API 100% 兼容 (头文件也是 <mysql.h>).
-# vcpkg 提供 Config 模式: unofficial-libmariadb.
+# libmariadb port 自带 CMake Config (share/unofficial-libmariadb/):
+#   portfile.cmake: vcpkg_cmake_config_fixup(PACKAGE_NAME unofficial-libmariadb)
+#   target 名: unofficial::libmariadb::libmariadb
+set(TCV_HAS_MYSQL OFF)
 find_package(unofficial-libmariadb CONFIG QUIET)
 if(TARGET unofficial::libmariadb::libmariadb)
-    message(STATUS "MySQL (libmariadb) FOUND — enabling TCV_HAS_MYSQL")
+    message(STATUS "MySQL (libmariadb) FOUND via find_package(unofficial-libmariadb CONFIG) — enabling TCV_HAS_MYSQL")
     set(TCV_HAS_MYSQL ON)
 else()
     message(STATUS "MySQL (libmariadb) NOT found — TCV will run WITHOUT MySQL support")
-    set(TCV_HAS_MYSQL OFF)
+    if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
+        set(_ma_share "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/unofficial-libmariadb")
+        if(EXISTS "${_ma_share}")
+            message(STATUS "  share EXISTS: ${_ma_share}")
+            message(STATUS "  but target unofficial::libmariadb::libmariadb not created — check Config file")
+        else()
+            message(STATUS "  share NOT FOUND at ${_ma_share} — vcpkg probably didn't install libmariadb")
+        endif()
+    endif()
 endif()
 
 # ── 条件链接 ──
