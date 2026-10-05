@@ -86,16 +86,19 @@ int main(const int argc, char** argv) {
         auto nthreads = std::thread::hardware_concurrency();
         if (nthreads == 0) nthreads = 4;
 
-        tcv::logger().INFO(
-            "Listening {}:{}, {} threads",
-            cfg.server().host,
-            cfg.server().port,
-            nthreads
-        );
+        auto& svr = drogon::app();
+        const auto& srv_cfg = cfg.server();
 
-        drogon::app()
-           .addListener(cfg.server().host, cfg.server().port)
-           .setThreadNum(nthreads)
+        if (!srv_cfg.ipv4_host.empty()) {
+            tcv::logger().INFO("Listening IPv4 {}:{}, {} threads", srv_cfg.ipv4_host, srv_cfg.port, nthreads);
+            svr.addListener(srv_cfg.ipv4_host, srv_cfg.port);
+        }
+        if (!srv_cfg.ipv6_host.empty()) {
+            tcv::logger().INFO("Listening IPv6 [{}]:{}, {} threads", srv_cfg.ipv6_host, srv_cfg.port, nthreads);
+            svr.addListener(srv_cfg.ipv6_host, srv_cfg.port);
+        }
+
+        svr.setThreadNum(nthreads)
            .enableServerHeader(false)
            .setDocumentRoot("./tcv_web")
            .run();
