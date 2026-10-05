@@ -361,11 +361,24 @@ jobs:
                   YAML
                   cd build
                   ./TingCloudVerifier > /tmp/tcv.log 2>&1 &
-                  sleep 3
-                  curl -s -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10221/api/v1/auth/bootstrap-admin \
+                  echo "PID=$!"
+                  # Wait for server ready (retry 15 times, 1s interval)
+                  for i in $(seq 1 15); do
+                    if (ss -ltn 2>/dev/null | grep -q ":10221 ") || curl -s -o /dev/null http://127.0.0.1:10221/ 2>/dev/null; then
+                      echo "Server ready after ${i}s"
+                      break
+                    fi
+                    if ! kill -0 $! 2>/dev/null; then
+                      echo "ERROR: TingCloudVerifier process died! Log:"
+                      cat /tmp/tcv.log
+                      exit 1
+                    fi
+                    sleep 1
+                  done
+                  curl -s --retry 5 --retry-delay 1 -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10221/api/v1/auth/bootstrap-admin \
                     -H 'Content-Type: application/json' \
                     -d '{"username":"root","password":"Root123!","display_name":"root"}'
-                  echo "PostgreSQL backend PASSED"
+                  echo "PostgreSQL backend PASSED" 
 
     mysql-test:
         runs-on: ubuntu-24.04
@@ -427,11 +440,24 @@ jobs:
                   YAML
                   cd build
                   ./TingCloudVerifier > /tmp/tcv.log 2>&1 &
-                  sleep 5
-                  curl -s -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10222/api/v1/auth/bootstrap-admin \
+                  echo "PID=$!"
+                  # Wait for server ready (retry 15 times, 1s interval)
+                  for i in $(seq 1 15); do
+                    if (ss -ltn 2>/dev/null | grep -q ":10222 ") || curl -s -o /dev/null http://127.0.0.1:10222/ 2>/dev/null; then
+                      echo "Server ready after ${i}s"
+                      break
+                    fi
+                    if ! kill -0 $! 2>/dev/null; then
+                      echo "ERROR: TingCloudVerifier process died! Log:"
+                      cat /tmp/tcv.log
+                      exit 1
+                    fi
+                    sleep 1
+                  done
+                  curl -s --retry 5 --retry-delay 1 -o /dev/null -w "bootstrap: %{http_code}\n" -X POST http://127.0.0.1:10222/api/v1/auth/bootstrap-admin \
                     -H 'Content-Type: application/json' \
                     -d '{"username":"root","password":"Root123!","display_name":"root"}'
-                  echo "MySQL backend PASSED"
+                  echo "MySQL backend PASSED" 
 
     release:
         if: startsWith(github.ref, 'refs/tags/v')
@@ -460,6 +486,8 @@ jobs:
                   name: TingCloudVerifier ${{ github.ref_name }}
                   files: artifacts/*
                   prerelease: ${{ contains(github.ref_name, '-') }}
+
+
 
 
 
