@@ -86,12 +86,12 @@ else()
     set(TCV_HAS_PGSQL OFF)
 endif()
 
-find_package(unofficial-libmysql CONFIG QUIET)
-if(TARGET unofficial::libmysql::libmysql)
-    message(STATUS "MySQL (libmysql) FOUND — enabling TCV_HAS_MYSQL")
+find_package(unofficial-libmariadb CONFIG QUIET)
+if(TARGET unofficial::libmariadb::libmariadb)
+    message(STATUS "MySQL (libmariadb) FOUND — enabling TCV_HAS_MYSQL")
     set(TCV_HAS_MYSQL ON)
 else()
-    message(STATUS "MySQL (libmysql) NOT found — TCV will run WITHOUT MySQL support")
+    message(STATUS "MySQL (libmariadb) NOT found — TCV will run WITHOUT MySQL support")
     set(TCV_HAS_MYSQL OFF)
 endif()
 
@@ -109,7 +109,7 @@ if(TCV_HAS_PGSQL)
 endif()
 
 if(TCV_HAS_MYSQL)
-    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libmysql::libmysql)
+    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libmariadb::libmariadb)
     target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_MYSQL=1)
 endif()
 
@@ -127,4 +127,5 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
 endif()
+
 
