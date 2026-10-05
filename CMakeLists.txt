@@ -21,9 +21,6 @@ set(TCV_INCLUDE_DIRS
     "${CMAKE_SOURCE_DIR}/libs"
 )
 
-# Cross-compilation: Drogon's FindFilesystem uses try_run which can't
-# execute cross-compiled binaries. Pre-set all three tests.
-# See: drogon FindFilesystem.cmake (vcpkg_installed/*/share/drogon/)
 if(CMAKE_CROSSCOMPILING)
     if(MSVC)
         set(CXX_FILESYSTEM_NO_LINK_NEEDED TRUE  CACHE INTERNAL "")
@@ -57,10 +54,6 @@ add_executable(TingCloudVerifier src/main.cpp)
 
 target_include_directories(TingCloudVerifier PRIVATE ${TCV_INCLUDE_DIRS})
 
-# Verify vcpkg import targets actually resolve to library files.
-# macOS dynamic triplets are known to produce broken IMPORTED_LOCATION for
-# unofficial-sqlite3 (empty / wrong path), which silently yields a link line
-# without the library and -> "symbol(s) not found" at link time.
 foreach(_tgt unofficial::sqlite3::sqlite3 unofficial::argon2::libargon2)
     if(TARGET ${_tgt})
         get_target_property(_loc ${_tgt} IMPORTED_LOCATION_RELEASE)
@@ -84,18 +77,15 @@ foreach(_tgt unofficial::sqlite3::sqlite3 unofficial::argon2::libargon2)
     endif()
 endforeach()
 
-# ── 可选后端 ──
-# PostgreSQL: 运行时支持, 需要 vcpkg install libpq
-find_package(PostgreSQL QUIET)
-if(PostgreSQL_FOUND)
-    message(STATUS "PostgreSQL (libpq) FOUND — enabling TCV_HAS_PGSQL")
+find_package(unofficial-libpq CONFIG QUIET)
+if(TARGET unofficial::libpq::libpq)
+    message(STATUS "PostgreSQL (libpq via vcpkg) FOUND — enabling TCV_HAS_PGSQL")
     set(TCV_HAS_PGSQL ON)
 else()
     message(STATUS "PostgreSQL (libpq) NOT found — TCV will run WITHOUT PostgreSQL support")
     set(TCV_HAS_PGSQL OFF)
 endif()
 
-# MySQL/MariaDB: 运行时支持, 需要 vcpkg install libmysql
 find_package(unofficial-libmysql CONFIG QUIET)
 if(TARGET unofficial::libmysql::libmysql)
     message(STATUS "MySQL (libmysql) FOUND — enabling TCV_HAS_MYSQL")
@@ -114,7 +104,7 @@ target_link_libraries(TingCloudVerifier PRIVATE
 )
 
 if(TCV_HAS_PGSQL)
-    target_link_libraries(TingCloudVerifier PRIVATE PostgreSQL::PostgreSQL)
+    target_link_libraries(TingCloudVerifier PRIVATE unofficial::libpq::libpq)
     target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_PGSQL=1)
 endif()
 
