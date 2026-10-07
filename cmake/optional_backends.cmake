@@ -1,12 +1,5 @@
-# ── PostgreSQL (libpq) ──
-# vcpkg 重写了 find_package (toolchain.cmake L788), 调 find_package(PostgreSQL) 时会自动 include
-#   share/postgresql/vcpkg-cmake-wrapper.cmake
-# wrapper 先 find_library(PostgreSQL_LIBRARY_RELEASE NAMES pq libpq PATHS vcpkg_root/lib NO_DEFAULT_PATH REQUIRED)
-# 再 _find_package(PostgreSQL) —— 原生 FindPostgreSQL.cmake 发现变量已预填, 不会扫系统路径.
-# 所以 find_package(PostgreSQL) 在 Windows(不会抢 C:\Program Files) / Linux / macOS 都安全.
 set(TCV_HAS_PGSQL OFF)
 
-# 先检查 vcpkg 是否真的装了 libpq (wrapper 是否存在)
 if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
     set(_pq_wrapper "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/postgresql/vcpkg-cmake-wrapper.cmake")
     if(EXISTS "${_pq_wrapper}")
@@ -35,10 +28,6 @@ else()
     endif()
 endif()
 
-# ── MySQL / MariaDB (libmariadb) ──
-# libmariadb port 自带 CMake Config (share/unofficial-libmariadb/):
-#   portfile.cmake: vcpkg_cmake_config_fixup(PACKAGE_NAME unofficial-libmariadb)
-#   target 名: unofficial::libmariadb::libmariadb
 set(TCV_HAS_MYSQL OFF)
 find_package(unofficial-libmariadb CONFIG QUIET)
 if(TARGET unofficial::libmariadb::libmariadb)
@@ -57,7 +46,6 @@ else()
     endif()
 endif()
 
-# ── 条件链接 ──
 if(TCV_HAS_PGSQL)
     target_link_libraries(TingCloudVerifier PRIVATE PostgreSQL::PostgreSQL)
     target_compile_definitions(TingCloudVerifier PRIVATE TCV_HAS_PGSQL=1)
