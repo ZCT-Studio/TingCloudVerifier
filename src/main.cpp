@@ -33,29 +33,22 @@ namespace {
         try { std::filesystem::create_directories(path); } catch (...) {}
     }
 
-    void bootstrapDatabase() {
-        const auto& cfg = tcv::AppConfig::instance();
-        if (cfg.database().type != "sqlite") {
-            tcv::logger().FATAL("Non-SQLite backend not implemented yet");
-            std::exit(1);
-        }
-        const auto p = std::filesystem::path(cfg.database().sqlite_path);
-        if (p.has_parent_path()) ensureDirectory(p.parent_path());
-
-        auto& db = tcv::db::Database::instance();
-        db.open(cfg.database().sqlite_path);
-
-        tcv::logger().INFO("Database opened: \"{}\"", std::filesystem::absolute(cfg.database().sqlite_path).string());
-
-        std::string migrations = "migrations";
-        if (!std::filesystem::exists(migrations)) {
-            migrations = (std::filesystem::current_path() / "migrations").string();
-        }
+    bool bootstrapDatabase() {
         try {
+            const auto& cfg = tcv::AppConfig::instance();
+            auto& db = tcv::db::Database::instance();
+            db.open(cfg.database());
+
+            std::string migrations = "migrations";
+            if (!std::filesystem::exists(migrations)) {
+                migrations = (std::filesystem::current_path() / "migrations").string();
+            }
             tcv::db::MigrationRunner::runAll(migrations);
             tcv::logger().INFO("Migrations applied from: {}", migrations);
+            return true;
         } catch (const std::exception& e) {
-            tcv::logger().ERROR("Migrations failed: {}", e.what());
+            tcv::logger().ERROR("Database bootstrap FAILED: {}", e.what());
+            return false;
         }
     }
 }
@@ -70,10 +63,6 @@ int main(const int argc, char** argv) {
 
         if (!std::filesystem::exists(config_path)) {
             tcv::logger().FATAL("Config file not found");
-            if (std::filesystem::exists(config_path / "config.example.yaml"))
-                tcv::logger().WARN("Please rename config.example.yaml in the config folder to config.yaml, configure it, and then restart");
-            else
-                tcv::logger().FATAL("It might have been corrupted during download, please download the package again");
             return 1;
         }
 
@@ -85,7 +74,10 @@ int main(const int argc, char** argv) {
         tcv::logger().INFO("Logger initialized from config");
 
         tcv::logger().INFO("Bootstrapping database...");
-        bootstrapDatabase();
+        if (!bootstrapDatabase()) {
+            tcv::logger().FATAL("Cannot start: database bootstrap failed. Check TCV was compiled with the requested backend.");
+            return 1;
+        }
 
         tcv::logger().INFO("Registering routes...");
         tcv::middleware::registerAllMiddlewares(drogon::app());

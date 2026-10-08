@@ -19,11 +19,9 @@
 #ifndef TCV_COMMON_CONSTANTS_HPP
 #define TCV_COMMON_CONSTANTS_HPP
 
-namespace tcv {
-    namespace constants {
+namespace tcv::constants {
         inline constexpr auto PROJECT_NAME = "TingCloudVerifier";
         inline constexpr auto PROJECT_VERSION = "1.0.0";
-    }
 }
 
 #endif // TCV_COMMON_CONSTANTS_HPP

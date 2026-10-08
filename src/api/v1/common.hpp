@@ -299,14 +299,12 @@ inline std::string paramStr(
                         return;
                     }
 
-                    // ── 查 app（所有 client API 都需要 appid，提前拿到 dec_mode ──
                     auto appid_it = params.find("appid");
                     std::optional<tcv::models::App> app;
                     if (appid_it != params.end() && !appid_it->second.empty()) {
                         app = tcv::repo::AppRepo::findByAppid(appid_it->second);
                     }
 
-                    // ── 请求体解密（若 app 配置了 dec_mode 且请求带 encode）──
                     bool request_encrypted = false;
                     std::string used_dec_mode;
                     if (app && app->dec_mode != "NONE") {
@@ -326,7 +324,6 @@ inline std::string paramStr(
                         }
                     }
 
-                    // ── nonce 防重放 ──
                     auto nonce_it = params.find("nonce");
                     if (app && nonce_it != params.end() && !nonce_it->second.empty()) {
                         if (!tcv::repo::NonceRepo::tryUseNonce(
@@ -343,7 +340,6 @@ inline std::string paramStr(
                             return;
                         }
 
-                        // ── sign_enable=1 时强制 HMAC-SHA256 签名校验 ──
                         if (app->sign_enable == 1) {
                             const auto sig_it = params.find("signature");
                             if (sig_it == params.end() || sig_it->second.empty()) {
@@ -370,7 +366,6 @@ inline std::string paramStr(
                         }
                     }
 
-                    // ── 包装 cb：若请求加密，响应也用同算法加密 ──
                     auto orig_cb = std::move(cb);
                     auto wrapped_cb = [
                         orig_cb = std::move(orig_cb),
@@ -382,12 +377,12 @@ inline std::string paramStr(
                             orig_cb(resp);
                             return;
                         }
-                        // 把 handler 输出的 JSON body 加密后替换成 {"encode":"..."}
+
                         const auto body = resp->body();
-                        std::string body_str(body);
                         auto json = Json::Value{};
                         Json::CharReaderBuilder rb;
                         auto errs = std::string{};
+                        std::string body_str(body);
                         std::istringstream iss(body_str);
                         if (Json::parseFromStream(rb, iss, &json, &errs) && json.isObject()) {
                             Json::Value wrapped;
@@ -430,4 +425,8 @@ inline std::string paramStr(
 }
 
 #endif // TCV_API_V1_COMMON
+
+
+
+
 

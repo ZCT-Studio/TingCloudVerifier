@@ -8,8 +8,8 @@
             "dependencies": ["libpq"]
         },
         "mysql": {
-            "description": "MySQL / MariaDB backend support via libmysqlclient",
-            "dependencies": ["libmysqlclient"]
+            "description": "MySQL / MariaDB backend support via libmariadb (MariaDB Connector/C, API compatible with libmysqlclient)",
+            "dependencies": ["libmariadb"]
         }
     },
     "default-features": [],
@@ -21,4 +21,7 @@
         "argon2"
     ]
 }
+
+
+
 

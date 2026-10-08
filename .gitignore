@@ -29,6 +29,7 @@ vcpkg/
 
 # Local tests
 localtests/
+browser/
 
 # NodeJS
 node_modules/

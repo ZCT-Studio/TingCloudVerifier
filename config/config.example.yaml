@@ -5,15 +5,31 @@ server:
   port: 10211
 
 database:
-  # sqlite / postgresql
+  # sqlite | postgresql | mysql
   type: "sqlite"
+
+  # ── SQLite
   sqlite_path: "./tcv.db"
-  # postgresql 配置预留给扩展
+
+  # ── PostgreSQL
+  # type: "postgresql"
   # postgresql:
   #   host: "127.0.0.1"
   #   port: 5432
   #   dbname: "tcv"
   #   user: "tcv"
+  #   password: ""
+  #   sslmode: "prefer"       # disable / prefer / require / verify-ca / verify-full
+
+  # ── MySQL / MariaDB
+  # type: "mysql"
+  # mysql:
+  #   host: "127.0.0.1"
+  #   port: 3306
+  #   dbname: "tcv"
+  #   user: "tcv"
+  #   password: ""
+  #   connect_timeout_sec: 10
 
 security:
   # 管理接口安全等级：LOCAL / LAN / PUBLIC
