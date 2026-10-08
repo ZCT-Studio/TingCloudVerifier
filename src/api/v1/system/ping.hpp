@@ -44,7 +44,6 @@ namespace tcv::inside::api::v1::system::ping {
     ) {
         Json::Value v;
         v["pong"] = true;
-        v["server"] = "TingCloudVerifier";
         v["project"] = tcv::constants::PROJECT_NAME;
         v["version"] = tcv::constants::PROJECT_VERSION;
         v["server_time"] = static_cast<Json::Int64>(std::time(nullptr));

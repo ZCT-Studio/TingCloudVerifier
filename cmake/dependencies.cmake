@@ -4,13 +4,6 @@ find_package(yaml-cpp               CONFIG REQUIRED)
 find_package(OpenSSL                REQUIRED)
 find_package(unofficial-argon2      CONFIG REQUIRED)
 
-# ── jsoncpp: 修正 Debug/Release 混合链接 ──
-# Drogon 自带 FindJsoncpp.cmake (Module) 只用 find_library 找一个库,
-# 不区分 config. vcpkg static triplet 下 Debug 版在 <triplet>/debug/lib/,
-# Release 在 <triplet>/lib/, Drogon 会找 Release 版 → Debug 构建 CRT 混链.
-# 非 static triplet (x64-linux, arm64-osx 等动态 triplet), 所有 config
-# 共用 <triplet>/lib/, 不需要 debug 分支.
-# 修复: 只有 debug/lib/ 存在时才启用 generator expression, 否则保持 Drogon 原生结果.
 if(TARGET Jsoncpp_lib AND VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
     set(_icd_root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
     if(WIN32)
