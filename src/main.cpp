@@ -86,16 +86,24 @@ int main(const int argc, char** argv) {
         auto nthreads = std::thread::hardware_concurrency();
         if (nthreads == 0) nthreads = 4;
 
-        tcv::logger().INFO(
-            "Listening {}:{}, {} threads",
-            cfg.server().host,
-            cfg.server().port,
-            nthreads
-        );
+        auto& svr = drogon::app();
 
-        drogon::app()
-           .addListener(cfg.server().host, cfg.server().port)
-           .setThreadNum(nthreads)
+        if (const auto& [ipv4_host, ipv6_host, port] = cfg.server(); !ipv4_host.empty() && !ipv6_host.empty()) {
+            tcv::logger().INFO("Listening IPv4 {}:{} and IPv6 [{}]:{}, {} threads", ipv4_host, port, ipv6_host, port, nthreads);
+            svr.addListener(ipv4_host, port);
+            svr.addListener(ipv6_host, port);
+        } else {
+            if (!ipv4_host.empty()) {
+                tcv::logger().INFO("Listening IPv4 {}:{}, {} threads", ipv4_host, port, nthreads);
+                svr.addListener(ipv4_host, port);
+            }
+            if (!ipv6_host.empty()) {
+                tcv::logger().INFO("Listening IPv6 [{}]:{}, {} threads", ipv6_host, port, nthreads);
+                svr.addListener(ipv6_host, port);
+            }
+        }
+
+        svr.setThreadNum(nthreads)
            .enableServerHeader(false)
            .setDocumentRoot("./tcv_web")
            .run();

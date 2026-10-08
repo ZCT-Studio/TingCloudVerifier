@@ -1,7 +1,11 @@
 # TingCloudVerifier 配置
 
 server:
-  host: "0.0.0.0"
+  # IPv4 监听地址, "" 表示不监听 IPv4
+  ipv4_host: "0.0.0.0"
+  # IPv6 监听地址, "" 表示不监听 IPv6
+  ipv6_host: "::"
+  # 至少填一个 (ipv4_host / ipv6_host), 两者都空会报错
   port: 10211
 
 database:

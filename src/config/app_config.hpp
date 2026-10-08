@@ -78,7 +78,11 @@ namespace tcv {
     };
 
     struct ServerConfig {
-        std::string host = "0.0.0.0";
+        // IPv4 监听地址, "" 表示不监听 IPv4
+        std::string ipv4_host = "0.0.0.0";
+        // IPv6 监听地址, "" 表示不监听 IPv6
+        std::string ipv6_host = "::";
+        // 监听端口 (IPv4/IPv6 共用)
         int port = 10211;
     };
 
@@ -98,8 +102,30 @@ namespace tcv {
                 YAML::Node root = YAML::LoadFile(path);
 
                 if (auto n = root["server"]) {
-                    server_.host = n["host"].as<std::string>(server_.host);
                     server_.port = n["port"].as<int>(server_.port);
+
+                    // 新字段: ipv4_host / ipv6_host
+                    bool has_v4 = n["ipv4_host"].IsDefined();
+                    bool has_v6 = n["ipv6_host"].IsDefined();
+
+                    // 旧字段 host 兼容 (当作 ipv4_host)
+                    bool has_old_host = n["host"].IsDefined() && !has_v4;
+
+                    if (has_v4) {
+                        server_.ipv4_host = n["ipv4_host"].as<std::string>();
+                    } else if (has_old_host) {
+                        server_.ipv4_host = n["host"].as<std::string>();
+                    }
+
+                    if (has_v6) {
+                        server_.ipv6_host = n["ipv6_host"].as<std::string>();
+                    }
+
+                    // 校验: ipv4_host 和 ipv6_host 至少一个非空
+                    if (server_.ipv4_host.empty() && server_.ipv6_host.empty()) {
+                        throw std::runtime_error("server.ipv4_host and server.ipv6_host cannot both be empty; "
+                                                 "at least one listen address is required");
+                    }
                 }
 
                 if (auto n = root["database"]) {
