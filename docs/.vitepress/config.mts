@@ -1,108 +1,105 @@
-// @ts-ignore
-import { defineConfig } from 'vitepress'
+import {defineConfig} from 'vitepress'
+
+const apiItems = [
+    {text: 'API 概览', link: '/api/overview'},
+    {text: '客户端 · verify', link: '/api/client/license-verify'},
+    {text: 'APP · set-decode', link: '/api/app/set-decode'},
+    {text: 'APP · sign-enable', link: '/api/app/sign-enable'},
+]
+
+const clientItems = [
+    {text: '客户端安全层', link: '/client/security'},
+    {text: '加密传输', link: '/client/encryption'},
+    {text: '签名校验', link: '/client/signing'},
+    {text: '完整示例', link: '/client/examples'},
+]
 
 export default defineConfig({
-  lang: 'zh-CN',
-  title: 'TingCloudVerifier',
-  description: '多平台软件授权验证服务端 · API 文档',
-
-  lastUpdated: true,
-  cleanUrls: true,
-
-  themeConfig: {
-    nav: [
-      { text: 'API 概览', link: '/api/overview' },
-      { text: '客户端安全', link: '/client/security' },
-      { text: '数据库', link: '/database/overview' },
-      { text: 'GitHub', link: 'https://github.com/<owner>/TingCloudVerifier' }
+    lang: 'zh-CN',
+    title: 'TingCloudVerifier',
+    description: '多平台软件授权验证服务端 · C++23 · Drogon · 三后端',
+    
+    lastUpdated: true,
+    cleanUrls: true,
+    
+    head: [
+        ['link', {rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml'}],
+        ['meta', {name: 'theme-color', content: '#6366f1'}],
+        ['meta', {property: 'og:type', content: 'website'}],
+        ['meta', {property: 'og:title', content: 'TingCloudVerifier — 多平台软件授权验证服务端'}],
+        ['meta', {
+            property: 'og:description',
+            content: 'C++23 · Drogon · SQLite/PostgreSQL/MySQL · 卡密系统 · 签名防重放 · AES256-GCM'
+        }],
+        ['style', {}, ':root { --vp-c-brand-1: #6366f1; --vp-c-brand-2: #4f46e5; --vp-c-brand-3: #4338ca; --vp-c-brand-soft: rgba(99, 102, 241, 0.12); }'],
     ],
-
-    sidebar: {
-      '/database/': [
-        { text: '数据库概览', link: '/database/overview' },
-        { text: '启用可选后端', link: '/database/overview#启用可选后端' },
-        { text: '配置 (SQLite / PG / MySQL)', link: '/database/overview#config-yaml' },
-        { text: 'Migration 目录', link: '/database/overview#migration-目录结构' },
-        { text: '方言差异对照表', link: '/database/overview#方言差异' },
-        { text: '内部架构', link: '/database/overview#内部架构' },
-        { text: '业务主表', link: '/database/overview#业务主表三后端共用' },
-        { text: 'CI 回归', link: '/database/overview#ci-回归' },
-        { text: '加第四种后端', link: '/database/overview#给新项目加第四种后端' }
-      ],
-      '/api/': [
-        {
-          text: '认证',
-          items: [
-            { text: 'bootstrap-admin', link: '/api/auth/bootstrap-admin' },
-            { text: 'admin/login', link: '/api/auth/admin-login' },
-            { text: 'owner/login', link: '/api/auth/owner-login' },
-            { text: 'subuser/login', link: '/api/auth/subuser-login' },
-            { text: 'logout', link: '/api/auth/logout' }
-          ]
+    
+    themeConfig: {
+        siteTitle: '🜛 TingCloudVerifier',
+        
+        nav: [
+            {text: '文档', link: '/api/overview'},
+            {text: '数据库', link: '/database/overview'},
+            {text: 'GitHub', link: 'https://github.com/ZCT-Studio/TingCloudVerifier', target: '_blank'},
+        ],
+        
+        sidebar: {
+            '/api/': [
+                {text: 'API 概览', items: apiItems},
+            ],
+            '/client/': [
+                {text: '客户端', items: clientItems},
+            ],
+            '/database/': [
+                {
+                    text: '数据库', items: [
+                        {text: '概览', link: '/database/overview'},
+                        {text: 'SQLite / PG / MySQL 配置', link: '/database/overview#config-yaml'},
+                        {text: 'Migration 目录结构', link: '/database/overview#migration-目录结构'},
+                        {text: '三后端方言对照表', link: '/database/overview#方言差异'},
+                    ]
+                },
+            ],
         },
-        {
-          text: 'Admin',
-          items: [
-            { text: 'owner/create', link: '/api/admin/owner-create' },
-            { text: 'owner/balance', link: '/api/admin/owner-balance' },
-            { text: 'audit/list', link: '/api/admin/audit-list' },
-            { text: 'license-timer', link: '/api/admin/license-timer' }
-          ]
+        
+        socialLinks: [
+            {icon: 'github', link: 'https://github.com/ZCT-Studio/TingCloudVerifier', ariaLabel: 'GitHub'},
+        ],
+        
+        footer: {
+            message: 'Released under the Apache 2.0 License.',
+            copyright: 'Copyright © ZCT-Studio',
         },
-        {
-          text: 'APP 管理',
-          items: [
-            { text: 'app/create', link: '/api/app/create' },
-            { text: 'app/list', link: '/api/app/list' },
-            { text: 'app/delete', link: '/api/app/delete' },
-            { text: 'app/binding', link: '/api/app/binding' },
-            { text: 'app/secret/regenerate', link: '/api/app/secret-regenerate' },
-            { text: 'app/set-decode', link: '/api/app/set-decode' },
-            { text: 'app/sign-enable', link: '/api/app/sign-enable' },
-            { text: 'app/notice', link: '/api/app/notice' },
-            { text: 'app/channel & version', link: '/api/app/channel-version' }
-          ]
+        
+        search: {
+            provider: 'local',
         },
-        {
-          text: '卡密管理',
-          items: [
-            { text: 'license/create', link: '/api/license/create' },
-            { text: 'license/list', link: '/api/license/list' },
-            { text: 'license 时间/类型操作', link: '/api/license/time-type' },
-            { text: 'license 封禁/解绑/删除', link: '/api/license/ban-unbind' }
-          ]
+        
+        editLink: {
+            pattern: 'https://github.com/ZCT-Studio/TingCloudVerifier/edit/main/docs/:path',
+            text: '在 GitHub 上编辑此页',
         },
-        {
-          text: '客户端',
-          items: [
-            { text: 'client/license/verify', link: '/api/client/license-verify' },
-            { text: 'client/license/status', link: '/api/client/license-status' },
-            { text: 'client/license/remaining', link: '/api/client/license-remaining' },
-            { text: 'client/app/channels', link: '/api/client/app-channels' },
-            { text: 'client/app/version', link: '/api/client/app-version' },
-            { text: 'client/app/notice', link: '/api/client/app-notice' }
-          ]
-        }
-      ],
-      '/client/': [
-        { text: '客户端安全层', link: '/client/security' },
-        { text: '加密传输', link: '/client/encryption' },
-        { text: '签名校验', link: '/client/signing' },
-        { text: '完整示例', link: '/client/examples' }
-      ]
+        
+        outline: {
+            level: [2, 3],
+            label: '页面导航',
+        },
+        
+        darkModeSwitchLabel: '主题',
+        lightModeSwitchTitle: '切换到亮色模式',
+        darkModeSwitchTitle: '切换到暗色模式',
+        
+        lastUpdated: {
+            text: '最后更新于',
+            formatOptions: {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            },
+        },
+        
+        docFooter: {
+            prev: '上一页',
+            next: '下一页',
+        },
     },
-
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/<owner>/TingCloudVerifier' }
-    ],
-
-    footer: {
-      message: 'Apache 2.0 Licensed · © ZCT-Studio',
-      copyright: 'TingCloudVerifier'
-    },
-
-    search: {
-      provider: 'local'
-    }
-  }
 })

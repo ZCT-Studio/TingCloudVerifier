@@ -163,17 +163,6 @@ schema_migrations — 版本追踪（MigrationRunner 自动建）
 
 所有表的 `PRIMARY KEY` 都是整数自增，`TEXT` 字段三后端都支持，`FOREIGN KEY ... ON DELETE CASCADE` 三后端都支持。**没有用任何后端特有类型**（如 PostgreSQL 的 `JSONB`、MySQL 的 `DATETIME`）——全部用 `TEXT` + Unix timestamp 整数。
 
-## CI 回归
-
-GitHub Actions 里跑 2 个独立 job，只 smoke test migration + bootstrap：
-
-```yaml
-pg-test:     ubuntu-24.04 + postgres:16 docker + vcpkg[postgres] + /api/v1/auth/bootstrap-admin
-mysql-test:  ubuntu-24.04 + mysql:8.4  docker + vcpkg[mysql]    + /api/v1/auth/bootstrap-admin
-```
-
-SQLite 是默认后端（9 平台 matrix），不跑额外 smoke test。
-
 ## 给新项目加第四种后端？
 
 1. 写 `src/database/xxx_database.hpp` 继承 `IDatabase`
