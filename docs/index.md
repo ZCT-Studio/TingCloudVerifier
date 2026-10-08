@@ -58,3 +58,7 @@
 | Argon2id | vcpkg |
 | CMake | 4.4 |
 | vcpkg | manifest 模式 |
+
+---
+
+文档版本: v1.0.0
