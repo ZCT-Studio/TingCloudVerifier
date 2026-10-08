@@ -15,10 +15,9 @@
 - **[签名校验](./client/signing.md)** — HMAC-SHA256 canonical 串算法
 - **[完整示例](./client/examples.md)** — Python / Go / curl 客户端示例
 - **[API 概览](./api/overview.md)** — 全部端点速查表
-- **[认证 API](./api/auth/bootstrap-admin.md)** — bootstrap-admin / login / logout
-- **[APP 管理](./api/app/create.md)** — create / list / delete / binding / secret / decode / sign / notice / channel / version
-- **[卡密管理](./api/license/create.md)** — create / list / set-time / ban / unbind / delete
 - **[客户端 API](./api/client/license-verify.md)** — verify / status / remaining / channels / version / notice
+- **[APP: set-decode](./api/app/set-decode.md)** — 运行时调整 APP 加密模式
+- **[APP: sign-enable](./api/app/sign-enable.md)** — 运行时启用/禁用签名
 
 ## 特性
 
