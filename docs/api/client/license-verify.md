@@ -19,7 +19,7 @@
 | `license` | string | ✅ | 卡密明文（KEY-XXX-XXX） |
 | `device` | string | ⭕ | 设备标识（MAC 地址 hash / CPU ID hash / 自定义 hash） |
 
-> 当 APP `dec_mode != NONE` 时，`appid/license/device/timestamp/nonce` 全部塞进 `encode` 参数加密传输。见 [加密传输](../client/encryption.md)。
+> 当 APP `dec_mode != NONE` 时，`appid/license/device/timestamp/nonce` 全部塞进 `encode` 参数加密传输。见 [加密传输](../../client/encryption.md)。
 
 ## 成功响应
 
